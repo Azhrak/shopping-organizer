@@ -1,0 +1,58 @@
+{
+  "name": "hintavahti",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "vite dev --port 3000 --host",
+    "build": "vite build",
+    "start": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "db:up": "docker compose up -d postgres",
+    "db:migrate": "tsx --env-file=.env src/lib/db/migrate.ts",
+    "db:migrate:test": "tsx --env-file=.env src/lib/db/migrate-test.ts",
+    "db:codegen": "kysely-codegen --out-file=src/lib/db/types.ts",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "4.3.2",
+    "@tanstack/react-query": "5.101.4",
+    "@tanstack/react-router": "1.170.18",
+    "@tanstack/react-router-ssr-query": "1.167.1",
+    "@tanstack/react-start": "1.168.34",
+    "cheerio": "1.2.0",
+    "kysely": "0.29.2",
+    "pg": "8.22.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tailwindcss": "4.3.2",
+    "vite-tsconfig-paths": "6.1.1",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.2",
+    "@tanstack/react-router-devtools": "1.167.0",
+    "@types/node": "26.1.0",
+    "@types/pg": "8.20.0",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "dotenv": "17.4.2",
+    "kysely-codegen": "0.20.0",
+    "nitro": "3.0.260610-beta",
+    "tsx": "4.23.0",
+    "typescript": "6.0.3",
+    "vite": "8.2.0",
+    "vitest": "4.1.10"
+  }
+}

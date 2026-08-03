@@ -1,0 +1,12 @@
+node_modules
+.env
+.env.local
+dist
+.output
+.nitro
+.tanstack
+.vite
+*.tsbuildinfo
+src/routeTree.gen.ts
+coverage
+.DS_Store
