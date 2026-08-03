@@ -1,7 +1,12 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import { getGroupFn, listGroupsFn } from "~/lib/server/comparisons";
-import { getItemFn, listFoldersFn, listItemsFn } from "~/lib/server/items";
+import {
+	getItemFn,
+	listFoldersFn,
+	listItemsFn,
+	smartFilterCountsFn,
+} from "~/lib/server/items";
 import type { ListItemsParams } from "~/lib/services/queries.service";
 
 /**
@@ -17,6 +22,7 @@ export const queryKeys = {
 	itemList: (params: ListItemsParams) => ["items", "list", params] as const,
 	item: (itemId: string) => ["items", "detail", itemId] as const,
 	folders: ["folders"] as const,
+	smartCounts: ["smart-counts"] as const,
 	groups: ["groups"] as const,
 	group: (groupId: string) => ["groups", "detail", groupId] as const,
 };
@@ -39,6 +45,13 @@ export function foldersQuery() {
 	return queryOptions({
 		queryKey: queryKeys.folders,
 		queryFn: () => listFoldersFn(),
+	});
+}
+
+export function smartCountsQuery() {
+	return queryOptions({
+		queryKey: queryKeys.smartCounts,
+		queryFn: () => smartFilterCountsFn(),
 	});
 }
 

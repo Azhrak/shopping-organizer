@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatEur, formatPercent, toMajorUnits, toMinorUnits } from "./money";
+import {
+	formatEur,
+	formatPercent,
+	formatPercentMagnitude,
+	toMajorUnits,
+	toMinorUnits,
+} from "./money";
 
 describe("toMinorUnits", () => {
 	it("converts a whole-euro amount", () => {
@@ -62,7 +68,7 @@ describe("formatEur", () => {
 	// currency symbol. Normalise both to plain spaces so these assertions stay
 	// readable; the formatter output itself is left as the locale intends.
 	function normalise(s: string): string {
-		return s.replace(/[  ]/g, " ");
+		return s.replace(/[\u00a0\u202f]/g, " ");
 	}
 
 	it("formats thousands with a space and decimals with a comma", () => {
@@ -95,7 +101,7 @@ describe("formatPercent", () => {
 	// fi-FI emits U+2212 MINUS SIGN rather than an ASCII hyphen, plus the same
 	// no-break spaces as above.
 	function normalise(s: string): string {
-		return s.replace(/[  ]/g, " ").replace(/−/g, "-");
+		return s.replace(/[\u00a0\u202f]/g, " ").replace(/\u2212/g, "-");
 	}
 
 	it("shows a minus sign for a discount", () => {
@@ -117,5 +123,39 @@ describe("formatPercent", () => {
 	it("emits a real minus sign, not an ASCII hyphen", () => {
 		expect(formatPercent(-20)).toContain("−");
 		expect(formatPercent(-20)).not.toContain("-");
+	});
+});
+
+describe("formatPercentMagnitude", () => {
+	function normalise(s: string): string {
+		return s.replace(/[\u00a0\u202f]/g, " ").replace(/\u2212/g, "-");
+	}
+
+	/**
+	 * This exists because Math.abs() + formatPercent still prints "+", which
+	 * produced "+18 % below its usual price" in the UI — a sign contradicting
+	 * the sentence it sits in.
+	 */
+	it("never prints a plus sign", () => {
+		expect(formatPercentMagnitude(20)).not.toContain("+");
+		expect(normalise(formatPercentMagnitude(20))).toBe("20,0 %");
+	});
+
+	it("never prints a minus sign", () => {
+		expect(formatPercentMagnitude(-20)).not.toContain("−");
+		expect(formatPercentMagnitude(-20)).not.toContain("-");
+		expect(normalise(formatPercentMagnitude(-20))).toBe("20,0 %");
+	});
+
+	it("renders the same string for equal magnitudes of either sign", () => {
+		expect(formatPercentMagnitude(-18.25)).toBe(formatPercentMagnitude(18.25));
+	});
+
+	it("shows zero without a sign", () => {
+		expect(normalise(formatPercentMagnitude(0))).toBe("0,0 %");
+	});
+
+	it("respects a custom precision", () => {
+		expect(normalise(formatPercentMagnitude(-33.3444, 2))).toBe("33,34 %");
 	});
 });

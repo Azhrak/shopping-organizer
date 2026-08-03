@@ -1,5 +1,9 @@
-import type { Kysely } from "kysely";
-import { computeStats, type ItemStats } from "~/lib/core/pricing";
+import { type Kysely, sql } from "kysely";
+import {
+	computeStats,
+	type ItemStats,
+	trailingWindowStart,
+} from "~/lib/core/pricing";
 import type { DB } from "~/lib/db/types";
 import type { Availability, ExtractMethod } from "~/lib/extraction/types";
 
@@ -18,11 +22,28 @@ export type SortKey =
 	| "price_desc"
 	| "discount_desc";
 
+/**
+ * Saved views in the catalog sidebar.
+ *
+ * - "dropped": price fell within the trailing window (default 7 days).
+ * - "at_target": has a target and the current price is at or below it.
+ *
+ * These are computed from price history rather than stored flags, so they
+ * cannot drift out of sync with the data they describe.
+ */
+export type SmartFilter = "dropped" | "at_target";
+
+export const DROPPED_WINDOW_DAYS = 7;
+
 export interface ListItemsParams {
 	folder?: string | null;
 	search?: string | null;
 	sort?: SortKey;
 	includeArchived?: boolean;
+	/** Restrict to a saved view. Combines with folder and search. */
+	smartFilter?: SmartFilter | null;
+	/** Window for the "dropped" filter. Exposed for testing. */
+	droppedWindowDays?: number;
 	limit?: number;
 	offset?: number;
 }
@@ -41,9 +62,30 @@ export interface ItemListEntry {
 	createdAt: Date;
 	archivedAt: Date | null;
 	currentPrice: number | null;
+	/**
+	 * The price observed immediately before currentPrice, or null when the item
+	 * has only ever been checked once. Powers the design's struck-through
+	 * "was 269,00 €".
+	 */
+	previousPrice: number | null;
 	availability: Availability | null;
 	lastCheckedAt: Date | null;
+	/**
+	 * Recent prices, oldest first, for the card sparkline. Capped server-side —
+	 * a card renders a 72px line and cannot use more resolution than this.
+	 */
+	sparkline: Array<number>;
+	/**
+	 * Current price against this item's own trailing median, as a signed
+	 * percentage (negative = cheaper than typical). Null until there is enough
+	 * history to have a typical price. This is the figure the catalog's
+	 * discount badge shows.
+	 */
+	percentVsTypical: number | null;
 }
+
+/** How many history points a catalog card's sparkline draws. */
+const SPARKLINE_POINTS = 12;
 
 /**
  * List items with their most recent price.
@@ -61,6 +103,8 @@ export async function listItems(
 		search = null,
 		sort = "created_desc",
 		includeArchived = false,
+		smartFilter = null,
+		droppedWindowDays = DROPPED_WINDOW_DAYS,
 		limit = 200,
 		offset = 0,
 	} = params;
@@ -76,6 +120,21 @@ export async function listItems(
 					.orderBy("pc.checked_at", "desc")
 					.limit(1)
 					.as("latest"),
+			(join) => join.onTrue(),
+		)
+		// Second LATERAL for the price before the latest one. OFFSET 1 LIMIT 1
+		// walks the same (item_id, checked_at desc) index and stops at the second
+		// row, so this stays as cheap as the latest-price join.
+		.leftJoinLateral(
+			(eb) =>
+				eb
+					.selectFrom("price_checks as pc")
+					.select(["pc.price"])
+					.whereRef("pc.item_id", "=", "i.id")
+					.orderBy("pc.checked_at", "desc")
+					.offset(1)
+					.limit(1)
+					.as("prev"),
 			(join) => join.onTrue(),
 		)
 		.select([
@@ -94,6 +153,7 @@ export async function listItems(
 			"i.last_checked_at",
 			"latest.price as latest_price",
 			"latest.availability as latest_availability",
+			"prev.price as previous_price",
 		]);
 
 	if (!includeArchived) {
@@ -110,6 +170,29 @@ export async function listItems(
 		query = query.where((eb) =>
 			eb.or([eb("i.title", "ilike", pattern), eb("i.url", "ilike", pattern)]),
 		);
+	}
+
+	if (smartFilter === "at_target") {
+		// An item with no target can never be "at target", and one that has
+		// never been checked has no price to compare.
+		query = query
+			.where("i.target_price", "is not", null)
+			.whereRef("latest.price", "<=", "i.target_price");
+	}
+
+	if (smartFilter === "dropped") {
+		const since = new Date(
+			Date.now() - droppedWindowDays * 24 * 60 * 60 * 1000,
+		);
+
+		// "Dropped" means the newest price is strictly below the price directly
+		// preceding it, and that observation is recent. Comparing against the
+		// immediate predecessor rather than a window minimum means a price that
+		// fell and then recovered does not keep showing up as a drop.
+		query = query
+			.where("prev.price", "is not", null)
+			.whereRef("latest.price", "<", "prev.price")
+			.where("latest.checked_at", ">=", since);
 	}
 
 	switch (sort) {
@@ -135,6 +218,12 @@ export async function listItems(
 	}
 
 	const rows = await query.limit(limit).offset(offset).execute();
+	const ids = rows.map((r) => r.id);
+
+	const [sparklines, medians] = await Promise.all([
+		loadSparklines(db, ids),
+		loadTrailingMedians(db, ids),
+	]);
 
 	return rows.map((r) => ({
 		id: r.id,
@@ -150,9 +239,165 @@ export async function listItems(
 		createdAt: r.created_at as Date,
 		archivedAt: r.archived_at as Date | null,
 		currentPrice: r.latest_price ?? null,
+		previousPrice: r.previous_price ?? null,
 		availability: (r.latest_availability as Availability | null) ?? null,
 		lastCheckedAt: (r.last_checked_at as Date | null) ?? null,
+		sparkline: sparklines.get(r.id) ?? [],
+		percentVsTypical: percentVsTypical(
+			r.latest_price ?? null,
+			medians.get(r.id) ?? null,
+		),
 	}));
+}
+
+/**
+ * Current price against a trailing median, as a signed percentage.
+ *
+ * Mirrors the definition in computeStats (~/lib/core/pricing) so a catalog
+ * card and the detail view can never disagree about the same number. Kept as
+ * a tiny local rather than importing, because the list path has the median
+ * already aggregated in SQL and no PricePoint array to hand computeStats.
+ */
+function percentVsTypical(
+	current: number | null,
+	medianWindow: number | null,
+): number | null {
+	if (current === null || medianWindow === null || medianWindow === 0) {
+		return null;
+	}
+
+	return ((current - medianWindow) / medianWindow) * 100;
+}
+
+/**
+ * Trailing-window median price per item, computed in Postgres.
+ *
+ * percentile_cont keeps the aggregate at the database rather than shipping
+ * every item's full history to the application just to take a median for a
+ * badge. The detail view still uses computeStats over real history, and both
+ * use the same 90-day window.
+ */
+async function loadTrailingMedians(
+	db: Kysely<DB>,
+	itemIds: Array<string>,
+): Promise<Map<string, number>> {
+	const result = new Map<string, number>();
+
+	if (itemIds.length === 0) {
+		return result;
+	}
+
+	const since = trailingWindowStart(new Date());
+
+	const rows = await db
+		.selectFrom("price_checks")
+		.select([
+			"item_id",
+			// percentile_cont interpolates, matching median() in pricing.ts for
+			// even-sized samples rather than picking a lower/upper neighbour.
+			sql<number>`percentile_cont(0.5) within group (order by price)`.as(
+				"median",
+			),
+		])
+		.where("item_id", "in", itemIds)
+		.where("checked_at", ">=", since)
+		.groupBy("item_id")
+		.execute();
+
+	for (const row of rows) {
+		if (row.median !== null) {
+			result.set(row.item_id, Number(row.median));
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Recent prices per item for the catalog sparklines, oldest first.
+ *
+ * One windowed query for the whole page rather than one per card: N cards must
+ * not mean N round trips. ROW_NUMBER over the same (item_id, checked_at desc)
+ * index takes the newest SPARKLINE_POINTS per item, and the result is reversed
+ * so the line reads left-to-right in time order.
+ */
+async function loadSparklines(
+	db: Kysely<DB>,
+	itemIds: Array<string>,
+): Promise<Map<string, Array<number>>> {
+	const result = new Map<string, Array<number>>();
+
+	if (itemIds.length === 0) {
+		return result;
+	}
+
+	const rows = await db
+		.with("ranked", (qb) =>
+			qb
+				.selectFrom("price_checks")
+				.select(({ fn }) => [
+					"item_id",
+					"price",
+					fn
+						.agg<number>("row_number")
+						.over((ob) =>
+							ob.partitionBy("item_id").orderBy("checked_at", "desc"),
+						)
+						.as("rn"),
+				])
+				.where("item_id", "in", itemIds),
+		)
+		.selectFrom("ranked")
+		.select(["item_id", "price"])
+		.where("rn", "<=", SPARKLINE_POINTS)
+		.orderBy("item_id")
+		.orderBy("rn", "desc")
+		.execute();
+
+	for (const row of rows) {
+		const existing = result.get(row.item_id);
+		if (existing) {
+			existing.push(row.price);
+		} else {
+			result.set(row.item_id, [row.price]);
+		}
+	}
+
+	return result;
+}
+
+export interface SmartFilterCounts {
+	dropped: number;
+	atTarget: number;
+	archived: number;
+}
+
+/**
+ * Counts for the sidebar's saved views.
+ *
+ * Reuses listItems so a count can never disagree with the list it labels —
+ * one definition of "dropped", not two. The id-only projection keeps this
+ * cheap enough at single-user scale.
+ */
+export async function getSmartFilterCounts(
+	db: Kysely<DB>,
+	droppedWindowDays: number = DROPPED_WINDOW_DAYS,
+): Promise<SmartFilterCounts> {
+	const [dropped, atTarget, archived] = await Promise.all([
+		listItems(db, { smartFilter: "dropped", droppedWindowDays, limit: 500 }),
+		listItems(db, { smartFilter: "at_target", limit: 500 }),
+		db
+			.selectFrom("items")
+			.select(({ fn }) => fn.count<string>("id").as("count"))
+			.where("archived_at", "is not", null)
+			.executeTakeFirst(),
+	]);
+
+	return {
+		dropped: dropped.length,
+		atTarget: atTarget.length,
+		archived: Number(archived?.count ?? 0),
+	};
 }
 
 export async function listFolders(
@@ -193,6 +438,8 @@ export interface ItemDetail {
 		availability: Availability;
 		checkedAt: Date;
 	}>;
+	/** Price observed immediately before the current one, or null. */
+	previousPrice: number | null;
 	stats: ItemStats;
 }
 
@@ -255,6 +502,8 @@ export async function getItemDetail(
 		lastAlertPrice: item.last_alert_price,
 		lastAlertedAt: item.last_alerted_at as Date | null,
 		history,
+		// history is newest-first, so the second entry is the previous price.
+		previousPrice: history[1]?.price ?? null,
 		stats,
 	};
 }

@@ -7,6 +7,7 @@ import {
 	Scripts,
 } from "@tanstack/react-router";
 
+import { themeInitScript } from "~/components/AppShell";
 import appStyles from "~/styles.css?url";
 
 export interface RouterContext {
@@ -25,8 +26,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 	component: RootComponent,
 	notFoundComponent: () => (
 		<div className="p-8">
-			<h1 className="text-xl font-semibold">Not found</h1>
-			<Link to="/" className="text-blue-600 underline">
+			<h1 className="text-xl font-medium text-text">Not found</h1>
+			<Link to="/" className="text-accent hover:text-accent-hi">
 				Back to catalog
 			</Link>
 		</div>
@@ -38,31 +39,15 @@ function RootComponent() {
 		<html lang="fi">
 			<head>
 				<HeadContent />
+				{/*
+				 * Runs before first paint so a stored light theme does not flash
+				 * dark. Must stay in <head> and stay synchronous.
+				 */}
+				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: static, non-user-controlled theme bootstrap */}
+				<script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
 			</head>
 			<body>
-				<div className="mx-auto max-w-6xl p-6">
-					<header className="mb-6 flex items-baseline gap-6 border-b border-slate-200 pb-4 dark:border-slate-800">
-						<Link to="/" className="text-lg font-semibold">
-							Hintavahti
-						</Link>
-						<nav className="flex gap-4 text-sm">
-							<Link
-								to="/"
-								activeProps={{ className: "font-medium underline" }}
-								activeOptions={{ exact: true }}
-							>
-								Catalog
-							</Link>
-							<Link
-								to="/compare"
-								activeProps={{ className: "font-medium underline" }}
-							>
-								Comparisons
-							</Link>
-						</nav>
-					</header>
-					<Outlet />
-				</div>
+				<Outlet />
 				<Scripts />
 			</body>
 		</html>

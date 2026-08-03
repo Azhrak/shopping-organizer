@@ -10,6 +10,7 @@ import {
 } from "~/lib/services/items.service";
 import {
 	getItemDetail,
+	getSmartFilterCounts,
 	listFolders,
 	listItems,
 	updateItem,
@@ -37,6 +38,8 @@ const sortKey = z.enum([
 	"discount_desc",
 ]);
 
+const smartFilter = z.enum(["dropped", "at_target"]);
+
 export const listItemsFn = createServerFn({ method: "GET" })
 	.validator(
 		z.object({
@@ -44,6 +47,7 @@ export const listItemsFn = createServerFn({ method: "GET" })
 			search: z.string().trim().min(1).nullable().optional(),
 			sort: sortKey.optional(),
 			includeArchived: z.boolean().optional(),
+			smartFilter: smartFilter.nullable().optional(),
 			limit: z.number().int().min(1).max(500).optional(),
 			offset: z.number().int().min(0).optional(),
 		}),
@@ -55,6 +59,13 @@ export const listItemsFn = createServerFn({ method: "GET" })
 export const listFoldersFn = createServerFn({ method: "GET" }).handler(
 	async () => {
 		return listFolders(deps.db);
+	},
+);
+
+/** Counts for the sidebar's saved views. */
+export const smartFilterCountsFn = createServerFn({ method: "GET" }).handler(
+	async () => {
+		return getSmartFilterCounts(deps.db);
 	},
 );
 

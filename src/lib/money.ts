@@ -75,3 +75,23 @@ export function formatPercent(value: number, fractionDigits = 1): string {
 		signDisplay: "exceptZero",
 	}).format(value / 100);
 }
+
+/**
+ * Format a percentage magnitude, without a sign: -12.5 -> "12,5 %".
+ *
+ * For labels that state the direction in words ("18 % below its usual
+ * price"). Passing an absolute value to formatPercent would still print a
+ * leading "+", producing "+18 % below" — a sign that contradicts the sentence
+ * around it.
+ */
+export function formatPercentMagnitude(
+	value: number,
+	fractionDigits = 1,
+): string {
+	return new Intl.NumberFormat("fi-FI", {
+		style: "percent",
+		minimumFractionDigits: fractionDigits,
+		maximumFractionDigits: fractionDigits,
+		signDisplay: "never",
+	}).format(Math.abs(value) / 100);
+}

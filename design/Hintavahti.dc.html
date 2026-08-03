@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<style>
+:root{
+  --bg:#161826; --surface:#232532; --surface-2:#1d1f2c; --raised:#2a2d3c;
+  --text:#e9e9ed; --muted:#9397ab; --faint:#75798c;
+  --accent:#9184d9; --accent-hi:#b5abfc; --accent-tint:rgba(145,132,217,.12);
+  --accent-deep:#423a6a; --accent-on-deep:#e7e5fe;
+  --divider:rgba(233,233,237,.14); --hair:rgba(233,233,237,.08);
+  --good:#4faa84; --good-text:#8fd4b5; --good-tint:rgba(79,170,132,.14); --good-deep:#1f4a39;
+  --chip:#3f424d; --chip-text:#e4e7f5; --stripe:rgba(233,233,237,.055);
+  --shadow-sm:0 0 0 1px #3f424d; --shadow-md:0 0 0 1px #595d6c,0 6px 18px rgba(0,0,0,.55);
+}
+[data-theme="light"]{
+  --bg:#f1f2f8; --surface:#fbfbfe; --surface-2:#e9eaf3; --raised:#fdfdff;
+  --text:#22242e; --muted:#5f6376; --faint:#8b8fa1;
+  --accent:#6a5db3; --accent-hi:#5d5294; --accent-tint:rgba(106,93,179,.10);
+  --accent-deep:#ded9fb; --accent-on-deep:#453c78;
+  --divider:rgba(34,36,46,.14); --hair:rgba(34,36,46,.07);
+  --good:#2f8a63; --good-text:#1c6647; --good-tint:rgba(47,138,99,.12); --good-deep:#cfe9db;
+  --chip:#e4e7f5; --chip-text:#5f6376; --stripe:rgba(34,36,46,.06);
+  --shadow-sm:0 0 0 1px rgba(34,36,46,.10); --shadow-md:0 0 0 1px rgba(34,36,46,.09),0 6px 18px rgba(34,36,46,.10);
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:Inter,system-ui,sans-serif;font-weight:500;letter-spacing:-.015em;line-height:1.12;margin:0}
+a{color:var(--accent);text-decoration:none}
+a:hover{color:var(--accent-hi)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,textarea{font:inherit}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+::selection{background:color-mix(in srgb,var(--accent) 30%,transparent)}
+@media(max-width:1240px){[data-grid="cards"]{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+@media(max-width:1040px){[data-grid="cards"]{grid-template-columns:repeat(3,minmax(0,1fr))!important}[data-grid="compare"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(max-width:860px){[data-side="folders"]{display:none!important}[data-row="detail"]{grid-template-columns:1fr!important}[data-bar="top"]{flex-wrap:wrap!important}}
+@media(max-width:640px){[data-grid="cards"]{grid-template-columns:repeat(2,minmax(0,1fr))!important}[data-grid="compare"]{grid-template-columns:1fr!important}}
+</style>
+</helmet>
+
+<div data-theme="{{ theme }}" style="min-height:100vh;background:var(--bg);color:var(--text);display:flex;flex-direction:column">
+ <div style="display:contents;--navCatalog:{{ navCatalog }};--navDetail:{{ navDetail }};--navCompare:{{ navCompare }};--layoutGridColor:{{ layoutGridColor }};--layoutRowsColor:{{ layoutRowsColor }};--layoutGridRing:{{ layoutGridRing }};--layoutRowsRing:{{ layoutRowsRing }};--cmpCardsColor:{{ cmpCardsColor }};--cmpOverlayColor:{{ cmpOverlayColor }};--cmpCardsRing:{{ cmpCardsRing }};--cmpOverlayRing:{{ cmpOverlayRing }};--alertBorder:{{ alertBorder }};--alertColor:{{ alertColor }};--alertTrack:{{ alertTrack }};--alertKnob:{{ alertKnob }};--alertKnobColor:{{ alertKnobColor }}">
+
+  <header style="display:flex;align-items:center;gap:22.4px;padding:11.2px 16.8px;background:var(--surface-2);position:sticky;top:0;z-index:20;box-shadow:0 1px 0 var(--hair)">
+    <div style="display:flex;align-items:center;gap:8.4px;margin-right:auto">
+      <span style="width:22px;height:22px;border-radius:6px;border:1px solid var(--accent);display:grid;place-items:center;color:var(--accent);font-size:12px"><i class="ph ph-eye"></i></span>
+      <span style="font-size:17px;font-weight:500;letter-spacing:-.02em">Hintavahti</span>
+      <span style="font-size:11px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;margin-left:5.6px">price watch</span>
+    </div>
+    <nav style="display:flex;align-items:center;gap:2.8px">
+      <button onClick="{{ goCatalog }}" style="padding:5.6px 11.2px;border-radius:8px;font-size:14px;color:var(--navCatalog)" style-hover="background:var(--hair)">Catalog</button>
+      <button onClick="{{ goDetail }}" style="padding:5.6px 11.2px;border-radius:8px;font-size:14px;color:var(--navDetail)" style-hover="background:var(--hair)">Product</button>
+      <button onClick="{{ goCompare }}" style="padding:5.6px 11.2px;border-radius:8px;font-size:14px;color:var(--navCompare)" style-hover="background:var(--hair)">Comparison</button>
+    </nav>
+    <button onClick="{{ toggleTheme }}" title="Toggle light / dark" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--divider);display:grid;place-items:center;color:var(--muted)" style-hover="color:var(--accent);border-color:var(--accent)"><i class="ph ph-circle-half-tilt"></i></button>
+    <span style="width:28px;height:28px;border-radius:50%;background:var(--chip);color:var(--chip-text);display:grid;place-items:center;font-size:11px;letter-spacing:.02em">AK</span>
+  </header>
+
+  <div style="display:flex;align-items:flex-start;flex:1">
+
+    <aside data-side="folders" style="width:210px;flex:none;padding:16.8px 11.2px;position:sticky;top:55px;align-self:flex-start">
+      <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:0 8.4px 8.4px">Folders</div>
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <button onClick="{{ goCatalog }}" style="display:flex;align-items:center;gap:8.4px;padding:6px 8.4px;border-radius:8px;font-size:14px;background:var(--accent-tint);box-shadow:inset 0 0 0 1px var(--accent-deep)"><i class="ph ph-squares-four" style="color:var(--accent)"></i><span style="flex:1;text-align:left">All saved</span><span style="font-size:12px;color:var(--muted)">24</span></button>
+        <button style="display:flex;align-items:center;gap:8.4px;padding:6px 8.4px;border-radius:8px;font-size:14px;color:var(--muted)" style-hover="background:var(--hair);color:var(--text)"><i class="ph ph-mountains"></i><span style="flex:1;text-align:left">Hiking</span><span style="font-size:12px">7</span></button>
+        <button style="display:flex;align-items:center;gap:8.4px;padding:6px 8.4px;border-radius:8px;font-size:14px;color:var(--muted)" style-hover="background:var(--hair);color:var(--text)"><i class="ph ph-armchair"></i><span style="flex:1;text-align:left">Furniture</span><span style="font-size:12px">5</span></button>
+        <button style="display:flex;align-items:center;gap:8.4px;padding:6px 8.4px;border-radius:8px;font-size:14px;color:var(--muted)" style-hover="background:var(--hair);color:var(--text)"><i class="ph ph-sneaker"></i><span style="flex:1;text-align:left">Shoes</span><span style="font-size:12px">6</span></button>
+        <button style="display:flex;align-items:center;gap:8.4px;padding:6px 8.4px;border-radius:8px;font-size:14px;color:var(--muted)" style-hover="background:var(--hair);color:var(--text)"><i class="ph ph-tent"></i><span style="flex:1;text-align:left">Outdoor</span><span style="font-size:12px">6</span></button>
+      </div>
+      <div style="height:1px;background:linear-gradient(to right,transparent,var(--hair) 24px,var(--hair) calc(100% - 24px),transparent);margin:16.8px 0"></div>
+      <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:0 8.4px 8.4px">Watching</div>
+      <div style="display:flex;flex-direction:column;gap:1px">
+        <button style="display:flex;align-items:center;gap:8.4px;padding:6px 8.4px;border-radius:8px;font-size:14px;color:var(--muted)" style-hover="background:var(--hair);color:var(--text)"><i class="ph ph-trend-down" style="color:var(--good)"></i><span style="flex:1;text-align:left">Dropped this week</span><span style="font-size:12px">6</span></button>
+        <button style="display:flex;align-items:center;gap:8.4px;padding:6px 8.4px;border-radius:8px;font-size:14px;color:var(--muted)" style-hover="background:var(--hair);color:var(--text)"><i class="ph ph-target"></i><span style="flex:1;text-align:left">At target price</span><span style="font-size:12px">2</span></button>
+        <button style="display:flex;align-items:center;gap:8.4px;padding:6px 8.4px;border-radius:8px;font-size:14px;color:var(--muted)" style-hover="background:var(--hair);color:var(--text)"><i class="ph ph-archive"></i><span style="flex:1;text-align:left">Archive</span><span style="font-size:12px">3</span></button>
+      </div>
+      <div style="margin-top:22.4px;padding:11.2px;border-radius:8px;background:var(--surface);box-shadow:var(--shadow-sm)">
+        <div style="font-size:12px;color:var(--muted);line-height:1.45">Last check <span style="color:var(--text)">14 min ago</span><br>Watching 24 items in 7 stores.</div>
+      </div>
+    </aside>
+
+    <main style="flex:1;min-width:0;padding:16.8px 22.4px 44.8px">
+
+      <sc-if value="{{ isCatalog }}" hint-placeholder-val="{{ true }}">
+      <section>
+        <div data-bar="top" style="display:flex;align-items:center;gap:11.2px;margin-bottom:16.8px">
+          <div style="display:flex;align-items:center;gap:8.4px;flex:1;min-width:200px;max-width:340px;padding:0 11.2px;height:36px;border-radius:8px;background:var(--surface);border:1px solid var(--divider)">
+            <i class="ph ph-magnifying-glass" style="color:var(--faint);font-size:15px"></i>
+            <input placeholder="Search saved products" style="flex:1;min-width:0;background:none;border:0;color:var(--text);font-size:14px;outline:none">
+          </div>
+          <div style="flex:1"></div>
+          <button style="display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 13.4px;border-radius:8px;border:1px solid var(--divider);font-size:14px;color:var(--text);white-space:nowrap" style-hover="background:var(--hair)"><i class="ph ph-browsers"></i>Grab open tabs<span style="font-size:11px;color:var(--faint)">9</span></button>
+          <button style="display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 13.4px;border-radius:8px;border:1px solid var(--accent);color:var(--accent);font-size:14px;white-space:nowrap" style-hover="background:var(--accent-tint)"><i class="ph ph-plus"></i>Add product</button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:11.2px;flex-wrap:wrap;margin-bottom:16.8px">
+          <div style="display:flex;align-items:center;gap:5.6px;flex-wrap:wrap">
+            <button style="padding:4px 11.2px;border-radius:6px;font-size:12px;background:var(--accent-deep);color:var(--accent-on-deep)">All</button>
+            <button style="padding:4px 11.2px;border-radius:6px;font-size:12px;color:var(--muted);border:1px solid var(--divider)" style-hover="color:var(--accent);border-color:var(--accent)">Hiking</button>
+            <button style="padding:4px 11.2px;border-radius:6px;font-size:12px;color:var(--muted);border:1px solid var(--divider)" style-hover="color:var(--accent);border-color:var(--accent)">Furniture</button>
+            <button style="padding:4px 11.2px;border-radius:6px;font-size:12px;color:var(--muted);border:1px solid var(--divider)" style-hover="color:var(--accent);border-color:var(--accent)">Shoes</button>
+            <button style="padding:4px 11.2px;border-radius:6px;font-size:12px;color:var(--muted);border:1px solid var(--divider)" style-hover="color:var(--accent);border-color:var(--accent)">Outdoor</button>
+          </div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:8.4px">
+            <span style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)">Layout</span>
+            <div style="display:inline-flex;border:1px solid var(--divider);border-radius:8px;overflow:hidden">
+              <button onClick="{{ setGrid }}" style="padding:5px 10px;font-size:13px;color:var(--layoutGridColor);box-shadow:var(--layoutGridRing)"><i class="ph ph-squares-four"></i></button>
+              <button onClick="{{ setRows }}" style="padding:5px 10px;font-size:13px;border-left:1px solid var(--divider);color:var(--layoutRowsColor);box-shadow:var(--layoutRowsRing)"><i class="ph ph-rows"></i></button>
+            </div>
+            <span style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-left:5.6px">Sort</span>
+            <div style="display:inline-flex;border:1px solid var(--divider);border-radius:8px;overflow:hidden">
+              <button style="padding:5px 11.2px;font-size:13px;white-space:nowrap;color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)">Recently dropped</button>
+              <button style="padding:5px 11.2px;font-size:13px;white-space:nowrap;border-left:1px solid var(--divider);color:var(--muted)" style-hover="background:var(--hair)">Biggest discount</button>
+              <button style="padding:5px 11.2px;font-size:13px;white-space:nowrap;border-left:1px solid var(--divider);color:var(--muted)" style-hover="background:var(--hair)">Price ↑</button>
+              <button style="padding:5px 11.2px;font-size:13px;white-space:nowrap;border-left:1px solid var(--divider);color:var(--muted)" style-hover="background:var(--hair)">Recently added</button>
+            </div>
+          </div>
+        </div>
+
+        <sc-if value="{{ isGrid }}" hint-placeholder-val="{{ true }}">
+        <div data-grid="cards" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11.2px">
+
+          <article onClick="{{ goDetail }}" style="display:flex;flex-direction:column;background:var(--surface);border-radius:8px;box-shadow:var(--shadow-sm);overflow:hidden;cursor:pointer" style-hover="box-shadow:var(--shadow-md)">
+            <div style="position:relative;aspect-ratio:4/3;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.04em;color:var(--faint)">product shot</span>
+              <span style="position:absolute;top:8px;left:8px;padding:2px 7px;border-radius:5px;background:var(--good-deep);color:var(--good-text);font-size:11px;font-weight:500">−18%</span>
+            </div>
+            <div style="padding:11.2px;display:flex;flex-direction:column;gap:5.6px;flex:1">
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted)"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">P</span>Partioaitta</div>
+              <div style="font-size:13.5px;line-height:1.3;text-wrap:pretty">Meindl Bhutan MFS trekking boot</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:2.8px"><span style="font-size:19px;font-weight:600;letter-spacing:-.02em">219,90 €</span><span style="font-size:12px;color:var(--faint);text-decoration:line-through">269,00 €</span></div>
+              <div style="display:flex;align-items:center;gap:8.4px">
+                <svg viewBox="0 0 72 20" width="72" height="20" preserveAspectRatio="none" style="flex:none"><polyline points="0,5 9,4 18,7 27,6 36,8 45,7 54,9 63,15 72,16" fill="none" stroke="var(--good)" stroke-width="1.4" stroke-linejoin="round"></polyline></svg>
+                <span style="font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">90 d</span>
+                <span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)"><span style="width:5px;height:5px;border-radius:50%;background:var(--good)"></span>In stock</span>
+              </div>
+              <div style="margin-top:auto;padding-top:8.4px">
+                <div style="height:3px;border-radius:2px;background:var(--hair);overflow:hidden"><div style="width:70%;height:100%;background:var(--accent)"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:4px"><span>Target 199 €</span><span>21 € to go</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article style="display:flex;flex-direction:column;background:var(--surface);border-radius:8px;box-shadow:var(--shadow-sm);overflow:hidden;cursor:pointer" style-hover="box-shadow:var(--shadow-md)">
+            <div style="position:relative;aspect-ratio:4/3;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.04em;color:var(--faint)">product shot</span>
+              <span style="position:absolute;top:8px;left:8px;padding:2px 7px;border-radius:5px;background:var(--good-deep);color:var(--good-text);font-size:11px;font-weight:500">−24%</span>
+            </div>
+            <div style="padding:11.2px;display:flex;flex-direction:column;gap:5.6px;flex:1">
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted)"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">V</span>Verkkokauppa.com</div>
+              <div style="font-size:13.5px;line-height:1.3;text-wrap:pretty">Salomon XA Pro 3D v9 trail shoe</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:2.8px"><span style="font-size:19px;font-weight:600;letter-spacing:-.02em">114,90 €</span><span style="font-size:12px;color:var(--faint);text-decoration:line-through">150,00 €</span></div>
+              <div style="display:flex;align-items:center;gap:8.4px">
+                <svg viewBox="0 0 72 20" width="72" height="20" preserveAspectRatio="none" style="flex:none"><polyline points="0,4 9,6 18,5 27,8 36,6 45,10 54,9 63,13 72,17" fill="none" stroke="var(--good)" stroke-width="1.4" stroke-linejoin="round"></polyline></svg>
+                <span style="font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">90 d</span>
+                <span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)"><span style="width:5px;height:5px;border-radius:50%;background:var(--good)"></span>In stock</span>
+              </div>
+              <div style="margin-top:auto;padding-top:8.4px">
+                <div style="height:3px;border-radius:2px;background:var(--hair);overflow:hidden"><div style="width:100%;height:100%;background:var(--good)"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:4px"><span>Target 119 €</span><span style="color:var(--good-text)">Below target</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article style="display:flex;flex-direction:column;background:var(--surface);border-radius:8px;box-shadow:var(--shadow-sm);overflow:hidden;cursor:pointer" style-hover="box-shadow:var(--shadow-md)">
+            <div style="position:relative;aspect-ratio:4/3;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.04em;color:var(--faint)">product shot</span>
+              <span style="position:absolute;top:8px;left:8px;padding:2px 7px;border-radius:5px;background:var(--good-deep);color:var(--good-text);font-size:11px;font-weight:500">−22%</span>
+            </div>
+            <div style="padding:11.2px;display:flex;flex-direction:column;gap:5.6px;flex:1">
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted)"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">P</span>Partioaitta</div>
+              <div style="font-size:13.5px;line-height:1.3;text-wrap:pretty">Fjällräven Keb trekking trousers</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:2.8px"><span style="font-size:19px;font-weight:600;letter-spacing:-.02em">188,50 €</span><span style="font-size:12px;color:var(--faint);text-decoration:line-through">242,00 €</span></div>
+              <div style="display:flex;align-items:center;gap:8.4px">
+                <svg viewBox="0 0 72 20" width="72" height="20" preserveAspectRatio="none" style="flex:none"><polyline points="0,6 9,5 18,6 27,4 36,7 45,6 54,8 63,14 72,15" fill="none" stroke="var(--good)" stroke-width="1.4" stroke-linejoin="round"></polyline></svg>
+                <span style="font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">90 d</span>
+                <span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)"><span style="width:5px;height:5px;border-radius:50%;background:var(--good)"></span>In stock</span>
+              </div>
+              <div style="margin-top:auto;padding-top:8.4px">
+                <div style="height:3px;border-radius:2px;background:var(--hair);overflow:hidden"><div style="width:65%;height:100%;background:var(--accent)"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:4px"><span>Target 160 €</span><span>28 € to go</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article style="display:flex;flex-direction:column;background:var(--surface);border-radius:8px;box-shadow:var(--shadow-sm);overflow:hidden;cursor:pointer" style-hover="box-shadow:var(--shadow-md)">
+            <div style="position:relative;aspect-ratio:4/3;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.04em;color:var(--faint)">product shot</span>
+              <span style="position:absolute;top:8px;left:8px;padding:2px 7px;border-radius:5px;background:var(--good-deep);color:var(--good-text);font-size:11px;font-weight:500">−14%</span>
+            </div>
+            <div style="padding:11.2px;display:flex;flex-direction:column;gap:5.6px;flex:1">
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted)"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">N</span>Nordic Nest</div>
+              <div style="font-size:13.5px;line-height:1.3;text-wrap:pretty">Muuto Fiber side chair, oak base</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:2.8px"><span style="font-size:19px;font-weight:600;letter-spacing:-.02em">249,00 €</span><span style="font-size:12px;color:var(--faint);text-decoration:line-through">289,00 €</span></div>
+              <div style="display:flex;align-items:center;gap:8.4px">
+                <svg viewBox="0 0 72 20" width="72" height="20" preserveAspectRatio="none" style="flex:none"><polyline points="0,7 9,7 18,6 27,7 36,5 45,7 54,6 63,11 72,12" fill="none" stroke="var(--good)" stroke-width="1.4" stroke-linejoin="round"></polyline></svg>
+                <span style="font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">90 d</span>
+                <span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)"><span style="width:5px;height:5px;border-radius:50%;background:var(--good)"></span>In stock</span>
+              </div>
+              <div style="margin-top:auto;padding-top:8.4px">
+                <div style="height:3px;border-radius:2px;background:var(--hair);overflow:hidden"><div style="width:67%;height:100%;background:var(--accent)"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:4px"><span>Target 230 €</span><span>19 € to go</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article style="display:flex;flex-direction:column;background:var(--surface);border-radius:8px;box-shadow:var(--shadow-sm);overflow:hidden;cursor:pointer" style-hover="box-shadow:var(--shadow-md)">
+            <div style="position:relative;aspect-ratio:4/3;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.04em;color:var(--faint)">product shot</span>
+              <span style="position:absolute;top:8px;left:8px;padding:2px 7px;border-radius:5px;background:var(--good-deep);color:var(--good-text);font-size:11px;font-weight:500">−11%</span>
+            </div>
+            <div style="padding:11.2px;display:flex;flex-direction:column;gap:5.6px;flex:1">
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted)"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">X</span>XXL</div>
+              <div style="font-size:13.5px;line-height:1.3;text-wrap:pretty">Lowa Renegade GTX Mid</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:2.8px"><span style="font-size:19px;font-weight:600;letter-spacing:-.02em">179,00 €</span><span style="font-size:12px;color:var(--faint);text-decoration:line-through">200,00 €</span></div>
+              <div style="display:flex;align-items:center;gap:8.4px">
+                <svg viewBox="0 0 72 20" width="72" height="20" preserveAspectRatio="none" style="flex:none"><polyline points="0,8 9,7 18,9 27,7 36,8 45,6 54,7 63,10 72,11" fill="none" stroke="var(--good)" stroke-width="1.4" stroke-linejoin="round"></polyline></svg>
+                <span style="font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">90 d</span>
+                <span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)"><span style="width:5px;height:5px;border-radius:50%;background:var(--good)"></span>In stock</span>
+              </div>
+              <div style="margin-top:auto;padding-top:8.4px">
+                <div style="height:3px;border-radius:2px;background:var(--hair);overflow:hidden"><div style="width:78%;height:100%;background:var(--accent)"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:4px"><span>Target 165 €</span><span>14 € to go</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article style="display:flex;flex-direction:column;background:var(--surface);border-radius:8px;box-shadow:var(--shadow-sm);overflow:hidden;cursor:pointer" style-hover="box-shadow:var(--shadow-md)">
+            <div style="position:relative;aspect-ratio:4/3;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.04em;color:var(--faint);opacity:.6">product shot</span>
+              <span style="position:absolute;inset:0;background:var(--bg);opacity:.45"></span>
+            </div>
+            <div style="padding:11.2px;display:flex;flex-direction:column;gap:5.6px;flex:1">
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted)"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">S</span>Scandinavian Outdoor</div>
+              <div style="font-size:13.5px;line-height:1.3;text-wrap:pretty;color:var(--muted)">Hanwag Alaska GTX</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:2.8px"><span style="font-size:19px;font-weight:600;letter-spacing:-.02em;color:var(--muted)">289,00 €</span></div>
+              <div style="display:flex;align-items:center;gap:8.4px">
+                <svg viewBox="0 0 72 20" width="72" height="20" preserveAspectRatio="none" style="flex:none"><polyline points="0,10 9,9 18,10 27,8 36,9 45,8 54,7 63,7 72,6" fill="none" stroke="var(--faint)" stroke-width="1.4" stroke-linejoin="round"></polyline></svg>
+                <span style="font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">90 d</span>
+                <span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--faint)"><span style="width:5px;height:5px;border-radius:50%;background:var(--faint)"></span>Out of stock</span>
+              </div>
+              <div style="margin-top:auto;padding-top:8.4px">
+                <div style="height:3px;border-radius:2px;background:var(--hair);overflow:hidden"><div style="width:34%;height:100%;background:var(--faint)"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:4px"><span>Target 250 €</span><span>39 € to go</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article style="display:flex;flex-direction:column;background:var(--surface);border-radius:8px;box-shadow:var(--shadow-sm);overflow:hidden;cursor:pointer" style-hover="box-shadow:var(--shadow-md)">
+            <div style="position:relative;aspect-ratio:4/3;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.04em;color:var(--faint)">product shot</span>
+              <span style="position:absolute;top:8px;left:8px;padding:2px 7px;border-radius:5px;background:var(--good-deep);color:var(--good-text);font-size:11px;font-weight:500">−9%</span>
+            </div>
+            <div style="padding:11.2px;display:flex;flex-direction:column;gap:5.6px;flex:1">
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted)"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">S</span>Scandinavian Outdoor</div>
+              <div style="font-size:13.5px;line-height:1.3;text-wrap:pretty">Primus Lite+ stove system</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:2.8px"><span style="font-size:19px;font-weight:600;letter-spacing:-.02em">89,90 €</span><span style="font-size:12px;color:var(--faint);text-decoration:line-through">99,00 €</span></div>
+              <div style="display:flex;align-items:center;gap:8.4px">
+                <svg viewBox="0 0 72 20" width="72" height="20" preserveAspectRatio="none" style="flex:none"><polyline points="0,6 9,6 18,5 27,7 36,6 45,7 54,6 63,9 72,10" fill="none" stroke="var(--good)" stroke-width="1.4" stroke-linejoin="round"></polyline></svg>
+                <span style="font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">90 d</span>
+                <span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)"><span style="width:5px;height:5px;border-radius:50%;background:var(--good)"></span>In stock</span>
+              </div>
+              <div style="margin-top:auto;padding-top:8.4px">
+                <div style="height:3px;border-radius:2px;background:var(--hair);overflow:hidden"><div style="width:48%;height:100%;background:var(--accent)"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:4px"><span>Target 80 €</span><span>10 € to go</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article style="display:flex;flex-direction:column;background:var(--surface);border-radius:8px;box-shadow:var(--shadow-sm);overflow:hidden;cursor:pointer" style-hover="box-shadow:var(--shadow-md)">
+            <div style="position:relative;aspect-ratio:4/3;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.04em;color:var(--faint)">product shot</span>
+            </div>
+            <div style="padding:11.2px;display:flex;flex-direction:column;gap:5.6px;flex:1">
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted)"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">V</span>Verkkokauppa.com</div>
+              <div style="font-size:13.5px;line-height:1.3;text-wrap:pretty">Garmin Instinct 3 Solar 45 mm</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:2.8px"><span style="font-size:19px;font-weight:600;letter-spacing:-.02em">329,00 €</span></div>
+              <div style="display:flex;align-items:center;gap:8.4px">
+                <svg viewBox="0 0 72 20" width="72" height="20" preserveAspectRatio="none" style="flex:none"><polyline points="0,12 9,11 18,9 27,10 36,8 45,9 54,7 63,8 72,7" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-linejoin="round"></polyline></svg>
+                <span style="font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">90 d</span>
+                <span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)"><span style="width:5px;height:5px;border-radius:50%;background:var(--good)"></span>In stock</span>
+              </div>
+              <div style="margin-top:auto;padding-top:8.4px">
+                <div style="height:3px;border-radius:2px;background:var(--hair);overflow:hidden"><div style="width:22%;height:100%;background:var(--accent)"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:4px"><span>Target 299 €</span><span>30 € to go</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article style="display:flex;flex-direction:column;background:var(--surface);border-radius:8px;box-shadow:var(--shadow-sm);overflow:hidden;cursor:pointer" style-hover="box-shadow:var(--shadow-md)">
+            <div style="position:relative;aspect-ratio:4/3;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.04em;color:var(--faint)">product shot</span>
+              <span style="position:absolute;top:8px;left:8px;padding:2px 7px;border-radius:5px;background:var(--good-deep);color:var(--good-text);font-size:11px;font-weight:500">−6%</span>
+            </div>
+            <div style="padding:11.2px;display:flex;flex-direction:column;gap:5.6px;flex:1">
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted)"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">F</span>Finnish Design Shop</div>
+              <div style="font-size:13.5px;line-height:1.3;text-wrap:pretty">String Pocket shelf, walnut</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:2.8px"><span style="font-size:19px;font-weight:600;letter-spacing:-.02em">189,00 €</span><span style="font-size:12px;color:var(--faint);text-decoration:line-through">201,00 €</span></div>
+              <div style="display:flex;align-items:center;gap:8.4px">
+                <svg viewBox="0 0 72 20" width="72" height="20" preserveAspectRatio="none" style="flex:none"><polyline points="0,7 9,6 18,7 27,6 36,6 45,5 54,6 63,8 72,9" fill="none" stroke="var(--good)" stroke-width="1.4" stroke-linejoin="round"></polyline></svg>
+                <span style="font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">90 d</span>
+                <span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)"><span style="width:5px;height:5px;border-radius:50%;background:var(--good)"></span>In stock</span>
+              </div>
+              <div style="margin-top:auto;padding-top:8.4px">
+                <div style="height:3px;border-radius:2px;background:var(--hair);overflow:hidden"><div style="width:38%;height:100%;background:var(--accent)"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:4px"><span>Target 170 €</span><span>19 € to go</span></div>
+              </div>
+            </div>
+          </article>
+
+          <article style="display:flex;flex-direction:column;background:var(--surface);border-radius:8px;box-shadow:var(--shadow-sm);overflow:hidden;cursor:pointer" style-hover="box-shadow:var(--shadow-md)">
+            <div style="position:relative;aspect-ratio:4/3;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.04em;color:var(--faint)">product shot</span>
+            </div>
+            <div style="padding:11.2px;display:flex;flex-direction:column;gap:5.6px;flex:1">
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted)"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">V</span>Vepsäläinen</div>
+              <div style="font-size:13.5px;line-height:1.3;text-wrap:pretty">Artek Aalto Stool 60, birch</div>
+              <div style="display:flex;align-items:baseline;gap:6px;margin-top:2.8px"><span style="font-size:19px;font-weight:600;letter-spacing:-.02em">289,00 €</span></div>
+              <div style="display:flex;align-items:center;gap:8.4px">
+                <svg viewBox="0 0 72 20" width="72" height="20" preserveAspectRatio="none" style="flex:none"><polyline points="0,11 9,10 18,10 27,9 36,9 45,8 54,8 63,7 72,7" fill="none" stroke="var(--accent)" stroke-width="1.4" stroke-linejoin="round"></polyline></svg>
+                <span style="font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">90 d</span>
+                <span style="margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)"><span style="width:5px;height:5px;border-radius:50%;background:var(--good)"></span>In stock</span>
+              </div>
+              <div style="margin-top:auto;padding-top:8.4px">
+                <div style="height:3px;border-radius:2px;background:var(--hair);overflow:hidden"><div style="width:18%;height:100%;background:var(--accent)"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:4px"><span>Target 260 €</span><span>29 € to go</span></div>
+              </div>
+            </div>
+          </article>
+
+        </div>
+        </sc-if>
+
+        <sc-if value="{{ isRows }}">
+        <div style="display:flex;flex-direction:column;gap:5.6px">
+          <sc-for list="{{ rows }}" as="p" hint-placeholder-count="6">
+            <article style="display:grid;grid-template-columns:56px minmax(0,1fr) 130px 90px 168px 150px;align-items:center;gap:16.8px;padding:8.4px 11.2px;background:var(--surface);border-radius:8px;box-shadow:var(--shadow-sm)" style-hover="box-shadow:var(--shadow-md)">
+              <div style="width:56px;height:44px;border-radius:6px;background:repeating-linear-gradient(135deg,var(--stripe) 0 5px,transparent 5px 10px),var(--surface-2)"></div>
+              <div style="min-width:0">
+                <div style="font-size:14px;line-height:1.25">{{ p.title }}</div>
+                <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted);margin-top:2.8px"><span style="width:13px;height:13px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8px;display:grid;place-items:center;flex:none">{{ p.initial }}</span>{{ p.store }}<span style="color:var(--faint)">·</span><span style="color:{{ p.stockColor }}">{{ p.stock }}</span></div>
+              </div>
+              <div style="display:flex;align-items:baseline;gap:6px;justify-content:flex-end">
+                <span style="font-size:17px;font-weight:600;letter-spacing:-.02em">{{ p.price }}</span>
+              </div>
+              <div style="display:flex;justify-content:flex-end">
+                <sc-if value="{{ p.hasBadge }}" hint-placeholder-val="{{ true }}">
+                  <span style="padding:2px 7px;border-radius:5px;background:var(--good-deep);color:var(--good-text);font-size:11px;font-weight:500">{{ p.badgeText }}</span>
+                </sc-if>
+              </div>
+              <div style="display:flex;align-items:center;gap:8.4px">
+                <svg viewBox="0 0 72 20" width="72" height="20" preserveAspectRatio="none" style="flex:none"><polyline points="{{ p.sparkPoints }}" fill="none" stroke="{{ p.sparkColor }}" stroke-width="1.4" stroke-linejoin="round"></polyline></svg>
+                <span style="font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">{{ p.vs }}</span>
+              </div>
+              <div>
+                <div style="height:3px;border-radius:2px;background:var(--hair);overflow:hidden"><div style="width:{{ p.barWidth }};height:100%;background:{{ p.barColor }}"></div></div>
+                <div style="font-size:10.5px;color:var(--faint);margin-top:4px">{{ p.targetLabel }}</div>
+              </div>
+            </article>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <div style="display:flex;align-items:center;gap:8.4px;margin-top:22.4px;font-size:12px;color:var(--faint)"><i class="ph ph-info"></i>Showing 10 of 24 saved items · prices last refreshed 14 min ago</div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ isDetail }}">
+      <section>
+        <button onClick="{{ goCatalog }}" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-bottom:16.8px" style-hover="color:var(--accent)"><i class="ph ph-arrow-left"></i>All saved · Hiking</button>
+
+        <div data-row="detail" style="display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:22.4px;align-items:start">
+
+          <div>
+            <div style="position:relative;aspect-ratio:16/11;border-radius:8px;background:repeating-linear-gradient(135deg,var(--stripe) 0 8px,transparent 8px 16px),var(--surface);box-shadow:var(--shadow-sm);display:grid;place-items:center">
+              <span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.04em;color:var(--faint)">product shot — 1600 × 1100</span>
+              <span style="position:absolute;top:11.2px;left:11.2px;padding:3px 9px;border-radius:5px;background:var(--good-deep);color:var(--good-text);font-size:12px;font-weight:500">−18% since 24 Jul</span>
+            </div>
+            <div style="display:flex;gap:5.6px;margin-top:5.6px">
+              <div style="width:72px;height:56px;border-radius:6px;background:repeating-linear-gradient(135deg,var(--stripe) 0 5px,transparent 5px 10px),var(--surface);box-shadow:inset 0 0 0 1px var(--accent)"></div>
+              <div style="width:72px;height:56px;border-radius:6px;background:repeating-linear-gradient(135deg,var(--stripe) 0 5px,transparent 5px 10px),var(--surface)"></div>
+              <div style="width:72px;height:56px;border-radius:6px;background:repeating-linear-gradient(135deg,var(--stripe) 0 5px,transparent 5px 10px),var(--surface)"></div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16.8px">
+            <div>
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:12px;color:var(--muted);margin-bottom:5.6px"><span style="width:15px;height:15px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:9px;display:grid;place-items:center">P</span>Partioaitta<i class="ph ph-arrow-square-out" style="font-size:12px;color:var(--faint)"></i></div>
+              <h3 style="font-size:25px">Meindl Bhutan MFS trekking boot</h3>
+              <div style="display:flex;align-items:center;gap:11.2px;margin-top:8.4px;font-size:12.5px;color:var(--muted)">
+                <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:6px;height:6px;border-radius:50%;background:var(--good)"></span>In stock · sizes 42–46</span>
+                <span style="color:var(--faint)">·</span>
+                <span>Watching since 3 May</span>
+              </div>
+            </div>
+
+            <div style="padding:16.8px;border-radius:8px;background:var(--surface);box-shadow:var(--shadow-sm)">
+              <div style="display:flex;align-items:baseline;gap:8.4px">
+                <span style="font-size:34px;font-weight:600;letter-spacing:-.03em">219,90 €</span>
+                <span style="font-size:14px;color:var(--faint);text-decoration:line-through">269,00 €</span>
+              </div>
+              <div style="display:inline-flex;align-items:center;gap:6px;margin-top:8.4px;padding:3px 9px;border-radius:5px;background:var(--good-deep);color:var(--good-text);font-size:12px"><i class="ph ph-trend-down"></i>18% below your usual price for this</div>
+              <div style="height:1px;background:var(--hair);margin:16.8px 0"></div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:11.2px">
+                <div><div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)">Lowest ever</div><div style="font-size:17px;margin-top:2.8px">209,90 €</div><div style="font-size:11px;color:var(--faint)">Nov 2025</div></div>
+                <div><div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)">Typical (90 d)</div><div style="font-size:17px;margin-top:2.8px">268,00 €</div><div style="font-size:11px;color:var(--faint)">median</div></div>
+                <div><div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)">Your target</div><div style="font-size:17px;margin-top:2.8px;color:var(--accent)">199,00 €</div><div style="font-size:11px;color:var(--faint)">21 € to go</div></div>
+              </div>
+            </div>
+
+            <div style="padding:16.8px;border-radius:8px;background:var(--surface);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;gap:11.2px">
+              <div style="display:flex;align-items:flex-end;gap:8.4px">
+                <div style="flex:1">
+                  <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:5px">Alert me under</label>
+                  <div style="display:flex;align-items:center;gap:6px;height:36px;padding:0 10px;border-radius:8px;background:var(--surface-2);border:1px solid var(--divider)">
+                    <input value="{{ targetValue }}" onChange="{{ onTarget }}" style="flex:1;min-width:0;background:none;border:0;color:var(--text);font-size:14px;outline:none">
+                    <span style="font-size:13px;color:var(--faint)">€</span>
+                  </div>
+                </div>
+                <button onClick="{{ toggleAlert }}" style="display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 11.2px;border-radius:8px;border:1px solid var(--alertBorder);color:var(--alertColor);font-size:13px">
+                  <span style="width:26px;height:15px;border-radius:8px;background:var(--alertTrack);position:relative;flex:none"><span style="position:absolute;top:2px;left:var(--alertKnob);width:11px;height:11px;border-radius:50%;background:var(--alertKnobColor);transition:left .15s ease"></span></span>
+                  {{ alertLabel }}
+                </button>
+              </div>
+              <div style="font-size:11.5px;color:var(--faint)">You'll get one email when Partioaitta lists it under 199 €. No repeats for 7 days.</div>
+            </div>
+
+            <div>
+              <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:5px">Notes</label>
+              <textarea style="width:100%;min-height:84px;padding:8.4px 10px;font-size:13.5px;line-height:1.5;color:var(--text);background:var(--surface);border:1px solid var(--divider);border-radius:8px;resize:vertical;outline:none">Size 44 — tried at the Kamppi store, felt half a size large. Wide last, good for the Lapland trip in September. Wait for the autumn sale if it doesn't hit 199.</textarea>
+            </div>
+
+            <div style="display:flex;gap:8.4px">
+              <button onClick="{{ goCompare }}" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:38px;border-radius:8px;border:1px solid var(--accent);color:var(--accent);font-size:14px" style-hover="background:var(--accent-tint)"><i class="ph ph-columns"></i>Add to comparison</button>
+              <button style="width:38px;height:38px;border-radius:8px;border:1px solid var(--divider);color:var(--muted);display:grid;place-items:center" style-hover="color:var(--accent);border-color:var(--accent)"><i class="ph ph-folder-simple"></i></button>
+              <button style="width:38px;height:38px;border-radius:8px;border:1px solid var(--divider);color:var(--muted);display:grid;place-items:center" style-hover="color:var(--accent);border-color:var(--accent)"><i class="ph ph-trash"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:22.4px;padding:16.8px;border-radius:8px;background:var(--surface);box-shadow:var(--shadow-sm)">
+          <div style="display:flex;align-items:center;gap:11.2px;margin-bottom:16.8px;flex-wrap:wrap">
+            <h4 style="font-size:17px">Price history</h4>
+            <span style="font-size:12px;color:var(--faint)">Partioaitta · 4 price drops in the last year</span>
+            <div style="flex:1"></div>
+            <div style="display:inline-flex;border:1px solid var(--divider);border-radius:8px;overflow:hidden">
+              <button style="padding:5px 11.2px;font-size:12.5px;white-space:nowrap;color:var(--muted)" style-hover="background:var(--hair)">30 d</button>
+              <button style="padding:5px 11.2px;font-size:12.5px;white-space:nowrap;border-left:1px solid var(--divider);color:var(--muted)" style-hover="background:var(--hair)">90 d</button>
+              <button style="padding:5px 11.2px;font-size:12.5px;white-space:nowrap;border-left:1px solid var(--divider);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)">1 y</button>
+              <button style="padding:5px 11.2px;font-size:12.5px;white-space:nowrap;border-left:1px solid var(--divider);color:var(--muted)" style-hover="background:var(--hair)">All</button>
+            </div>
+          </div>
+
+          <svg viewBox="0 0 1000 260" width="100%" height="260" preserveAspectRatio="none" style="display:block;overflow:visible">
+            <line x1="0" y1="24" x2="1000" y2="24" stroke="var(--hair)" stroke-width="1"></line>
+            <line x1="0" y1="88" x2="1000" y2="88" stroke="var(--hair)" stroke-width="1"></line>
+            <line x1="0" y1="152" x2="1000" y2="152" stroke="var(--hair)" stroke-width="1"></line>
+            <line x1="0" y1="216" x2="1000" y2="216" stroke="var(--hair)" stroke-width="1"></line>
+            <line x1="0" y1="66" x2="1000" y2="66" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 5" opacity=".7"></line>
+            <line x1="0" y1="196" x2="1000" y2="196" stroke="var(--accent)" stroke-width="1" stroke-dasharray="4 4"></line>
+            <path d="M0,60 L70,60 L70,54 L150,54 L150,72 L230,72 L230,66 L310,66 L310,58 L400,58 L400,110 L470,110 L470,62 L560,62 L560,66 L650,66 L650,64 L730,64 L730,70 L800,70 L800,62 L860,62 L860,150 L920,150 L920,166 L1000,166 L1000,260 L0,260 Z" fill="var(--accent)" opacity=".10"></path>
+            <path d="M0,60 L70,60 L70,54 L150,54 L150,72 L230,72 L230,66 L310,66 L310,58 L400,58 L400,110 L470,110 L470,62 L560,62 L560,66 L650,66 L650,64 L730,64 L730,70 L800,70 L800,62 L860,62 L860,150 L920,150 L920,166 L1000,166" fill="none" stroke="var(--accent)" stroke-width="2"></path>
+            <circle cx="400" cy="110" r="4" fill="var(--good)"></circle>
+            <circle cx="860" cy="150" r="4" fill="var(--good)"></circle>
+            <circle cx="920" cy="166" r="4.5" fill="var(--good)"></circle>
+            <circle cx="1000" cy="166" r="4" fill="var(--bg)" stroke="var(--accent)" stroke-width="2.5"></circle>
+          </svg>
+          <div style="position:relative;height:26px;margin-top:2.8px">
+            <span style="position:absolute;left:0;font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">Aug 25</span>
+            <span style="position:absolute;left:24%;font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">Nov</span>
+            <span style="position:absolute;left:48%;font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">Feb 26</span>
+            <span style="position:absolute;left:72%;font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">May</span>
+            <span style="position:absolute;right:0;font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace">today</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:16.8px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:5.6px">
+            <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:16px;height:2px;background:var(--accent)"></span>Listed price</span>
+            <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:16px;height:0;border-top:1px dashed var(--muted)"></span>Typical price 268 €</span>
+            <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:16px;height:0;border-top:1px dashed var(--accent)"></span>Your target 199 €</span>
+            <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:var(--good)"></span>Price drop</span>
+          </div>
+        </div>
+      </section>
+      </sc-if>
+
+      <sc-if value="{{ isCompare }}">
+      <section>
+        <div style="display:flex;align-items:flex-end;gap:11.2px;flex-wrap:wrap;margin-bottom:16.8px">
+          <div>
+            <h3 style="font-size:25px">Trekking boots</h3>
+            <div style="font-size:12.5px;color:var(--muted);margin-top:4px">3 items from 3 stores · compared on what each one usually costs, not just today's sticker</div>
+          </div>
+          <div style="flex:1"></div>
+          <div style="display:flex;align-items:center;gap:8.4px">
+            <span style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)">View</span>
+            <div style="display:inline-flex;border:1px solid var(--divider);border-radius:8px;overflow:hidden">
+              <button onClick="{{ setCards }}" style="padding:5px 11.2px;font-size:12.5px;white-space:nowrap;color:var(--cmpCardsColor);box-shadow:var(--cmpCardsRing)">Cards</button>
+              <button onClick="{{ setOverlay }}" style="padding:5px 11.2px;font-size:12.5px;white-space:nowrap;border-left:1px solid var(--divider);color:var(--cmpOverlayColor);box-shadow:var(--cmpOverlayRing)">Overlaid history</button>
+            </div>
+          </div>
+        </div>
+
+        <sc-if value="{{ isOverlay }}">
+        <div style="padding:16.8px;border-radius:8px;background:var(--surface);box-shadow:var(--shadow-sm);margin-bottom:11.2px">
+          <div style="display:flex;align-items:center;gap:16.8px;flex-wrap:wrap;margin-bottom:11.2px">
+            <h4 style="font-size:17px">12 months, all three</h4>
+            <div style="flex:1"></div>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)"><span style="width:16px;height:2px;background:var(--accent)"></span>Meindl Bhutan</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)"><span style="width:16px;height:2px;background:var(--good)"></span>Lowa Renegade</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)"><span style="width:16px;height:2px;background:var(--muted)"></span>Hanwag Alaska</span>
+          </div>
+          <svg viewBox="0 0 1000 240" width="100%" height="240" preserveAspectRatio="none" style="display:block">
+            <line x1="0" y1="30" x2="1000" y2="30" stroke="var(--hair)"></line>
+            <line x1="0" y1="100" x2="1000" y2="100" stroke="var(--hair)"></line>
+            <line x1="0" y1="170" x2="1000" y2="170" stroke="var(--hair)"></line>
+            <polyline points="0,84 100,84 100,78 240,78 240,96 380,96 380,88 470,88 470,132 560,132 560,86 700,86 700,90 840,90 840,172 920,172 920,188 1000,188" fill="none" stroke="var(--accent)" stroke-width="2"></polyline>
+            <polyline points="0,146 120,146 120,138 260,138 260,150 400,150 400,142 540,142 540,152 660,152 660,140 780,140 780,158 900,158 900,164 1000,164" fill="none" stroke="var(--good)" stroke-width="2"></polyline>
+            <polyline points="0,52 140,52 140,44 300,44 300,56 440,56 440,48 600,48 600,40 760,40 760,46 880,46 880,38 1000,38" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="6 4"></polyline>
+            <circle cx="1000" cy="188" r="4" fill="var(--accent)"></circle>
+            <circle cx="1000" cy="164" r="4" fill="var(--good)"></circle>
+            <circle cx="1000" cy="38" r="4" fill="var(--muted)"></circle>
+          </svg>
+          <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);font-family:ui-monospace,Menlo,monospace;margin-top:4px"><span>Aug 25</span><span>Nov</span><span>Feb 26</span><span>May</span><span>today</span></div>
+        </div>
+        </sc-if>
+
+        <div data-grid="compare" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11.2px;align-items:start">
+
+          <article style="display:flex;flex-direction:column;gap:11.2px;padding:11.2px;border-radius:8px;background:var(--surface);box-shadow:0 0 0 1px var(--good),0 6px 18px rgba(0,0,0,.25);position:relative">
+            <span style="position:absolute;top:-9px;left:11.2px;padding:2px 9px;border-radius:5px;background:var(--good-deep);color:var(--good-text);font-size:11px;font-weight:500;display:inline-flex;align-items:center;gap:5px"><i class="ph ph-trend-down"></i>Best deal vs its own usual</span>
+            <div style="aspect-ratio:4/3;border-radius:6px;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center;margin-top:5.6px"><span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:var(--faint)">product shot</span></div>
+            <div>
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted);margin-bottom:4px"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">P</span>Partioaitta</div>
+              <div style="font-size:14px;line-height:1.3;text-wrap:pretty">Meindl Bhutan MFS</div>
+            </div>
+            <div>
+              <div style="font-size:26px;font-weight:600;letter-spacing:-.03em">219,90 €</div>
+              <div style="font-size:11.5px;color:var(--faint);margin-top:2px">was 269,00 € · 24 Jul</div>
+            </div>
+            <div style="padding:8.4px;border-radius:6px;background:var(--good-tint)">
+              <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--good-text);opacity:.85">vs its own usual</div>
+              <div style="font-size:19px;color:var(--good-text);margin-top:2px">18% below</div>
+              <div style="position:relative;height:16px;margin-top:6px">
+                <div style="position:absolute;top:7px;left:0;right:0;height:2px;background:var(--hair)"></div>
+                <div style="position:absolute;top:7px;left:8%;width:76%;height:2px;background:var(--good);opacity:.45"></div>
+                <div style="position:absolute;top:2px;left:14%;width:2px;height:12px;background:var(--good)"></div>
+                <div style="position:absolute;top:4px;left:62%;width:1px;height:8px;background:var(--muted)"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--faint);font-family:ui-monospace,Menlo,monospace"><span>210</span><span>usual 268</span><span>289</span></div>
+              <div style="font-size:11px;color:var(--good-text);margin-top:4px">Cheapest 9% of the past year</div>
+            </div>
+            <svg viewBox="0 0 200 48" width="100%" height="48" preserveAspectRatio="none"><polyline points="0,16 25,15 50,19 75,17 100,30 125,16 150,18 175,38 200,40" fill="none" stroke="var(--accent)" stroke-width="1.8"></polyline></svg>
+            <div style="display:flex;flex-direction:column;gap:5.6px;font-size:12.5px">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Lowest ever</span><span>209,90 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Typical (90 d)</span><span>268,00 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Your target</span><span style="color:var(--accent)">199,00 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Stock</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:50%;background:var(--good)"></span>In stock</span></div>
+            </div>
+            <button onClick="{{ goDetail }}" style="height:34px;border-radius:8px;border:1px solid var(--accent);color:var(--accent);font-size:13px" style-hover="background:var(--accent-tint)">Open at Partioaitta</button>
+          </article>
+
+          <article style="display:flex;flex-direction:column;gap:11.2px;padding:11.2px;border-radius:8px;background:var(--surface);box-shadow:0 0 0 1px var(--accent),0 6px 18px rgba(0,0,0,.25);position:relative">
+            <span style="position:absolute;top:-9px;left:11.2px;padding:2px 9px;border-radius:5px;background:var(--accent-deep);color:var(--accent-on-deep);font-size:11px;font-weight:500;display:inline-flex;align-items:center;gap:5px"><i class="ph ph-tag"></i>Cheapest right now</span>
+            <div style="aspect-ratio:4/3;border-radius:6px;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center;margin-top:5.6px"><span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:var(--faint)">product shot</span></div>
+            <div>
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted);margin-bottom:4px"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">X</span>XXL</div>
+              <div style="font-size:14px;line-height:1.3;text-wrap:pretty">Lowa Renegade GTX Mid</div>
+            </div>
+            <div>
+              <div style="font-size:26px;font-weight:600;letter-spacing:-.03em">179,00 €</div>
+              <div style="font-size:11.5px;color:var(--faint);margin-top:2px">was 200,00 € · 29 Jul</div>
+            </div>
+            <div style="padding:8.4px;border-radius:6px;background:var(--surface-2)">
+              <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)">vs its own usual</div>
+              <div style="font-size:19px;margin-top:2px">6% below</div>
+              <div style="position:relative;height:16px;margin-top:6px">
+                <div style="position:absolute;top:7px;left:0;right:0;height:2px;background:var(--hair)"></div>
+                <div style="position:absolute;top:7px;left:10%;width:70%;height:2px;background:var(--muted);opacity:.4"></div>
+                <div style="position:absolute;top:2px;left:46%;width:2px;height:12px;background:var(--text)"></div>
+                <div style="position:absolute;top:4px;left:58%;width:1px;height:8px;background:var(--muted)"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--faint);font-family:ui-monospace,Menlo,monospace"><span>172</span><span>usual 190</span><span>209</span></div>
+              <div style="font-size:11px;color:var(--muted);margin-top:4px">It sits here most of the year</div>
+            </div>
+            <svg viewBox="0 0 200 48" width="100%" height="48" preserveAspectRatio="none"><polyline points="0,20 25,18 50,24 75,20 100,26 125,17 150,22 175,26 200,28" fill="none" stroke="var(--good)" stroke-width="1.8"></polyline></svg>
+            <div style="display:flex;flex-direction:column;gap:5.6px;font-size:12.5px">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Lowest ever</span><span>172,00 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Typical (90 d)</span><span>190,00 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Your target</span><span style="color:var(--accent)">165,00 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Stock</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:5px;height:5px;border-radius:50%;background:var(--good)"></span>In stock</span></div>
+            </div>
+            <button style="height:34px;border-radius:8px;border:1px solid var(--divider);color:var(--text);font-size:13px" style-hover="background:var(--hair)">Open at XXL</button>
+          </article>
+
+          <article style="display:flex;flex-direction:column;gap:11.2px;padding:11.2px;border-radius:8px;background:var(--surface);box-shadow:var(--shadow-sm)">
+            <div style="aspect-ratio:4/3;border-radius:6px;background:repeating-linear-gradient(135deg,var(--stripe) 0 6px,transparent 6px 12px),var(--surface-2);display:grid;place-items:center;margin-top:5.6px;opacity:.6"><span style="font-family:ui-monospace,Menlo,monospace;font-size:9.5px;color:var(--faint)">product shot</span></div>
+            <div>
+              <div style="display:flex;align-items:center;gap:5.6px;font-size:11px;color:var(--muted);margin-bottom:4px"><span style="width:14px;height:14px;border-radius:4px;background:var(--chip);color:var(--chip-text);font-size:8.5px;display:grid;place-items:center;flex:none">S</span>Scandinavian Outdoor</div>
+              <div style="font-size:14px;line-height:1.3;text-wrap:pretty">Hanwag Alaska GTX</div>
+            </div>
+            <div>
+              <div style="font-size:26px;font-weight:600;letter-spacing:-.03em;color:var(--muted)">289,00 €</div>
+              <div style="font-size:11.5px;color:var(--faint);margin-top:2px">no change in 61 days</div>
+            </div>
+            <div style="padding:8.4px;border-radius:6px;background:var(--surface-2)">
+              <div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)">vs its own usual</div>
+              <div style="font-size:19px;margin-top:2px;color:var(--muted)">4% above</div>
+              <div style="position:relative;height:16px;margin-top:6px">
+                <div style="position:absolute;top:7px;left:0;right:0;height:2px;background:var(--hair)"></div>
+                <div style="position:absolute;top:7px;left:12%;width:74%;height:2px;background:var(--muted);opacity:.3"></div>
+                <div style="position:absolute;top:2px;left:80%;width:2px;height:12px;background:var(--muted)"></div>
+                <div style="position:absolute;top:4px;left:56%;width:1px;height:8px;background:var(--muted)"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--faint);font-family:ui-monospace,Menlo,monospace"><span>265</span><span>usual 278</span><span>299</span></div>
+              <div style="font-size:11px;color:var(--faint);margin-top:4px">Priciest third of the past year</div>
+            </div>
+            <svg viewBox="0 0 200 48" width="100%" height="48" preserveAspectRatio="none"><polyline points="0,30 25,28 50,32 75,26 100,28 125,24 150,26 175,22 200,20" fill="none" stroke="var(--faint)" stroke-width="1.8"></polyline></svg>
+            <div style="display:flex;flex-direction:column;gap:5.6px;font-size:12.5px">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Lowest ever</span><span>265,00 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Typical (90 d)</span><span>278,00 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Your target</span><span style="color:var(--accent)">250,00 €</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Stock</span><span style="display:inline-flex;align-items:center;gap:5px;color:var(--faint)"><span style="width:5px;height:5px;border-radius:50%;background:var(--faint)"></span>Out of stock</span></div>
+            </div>
+            <button style="height:34px;border-radius:8px;border:1px solid var(--divider);color:var(--muted);font-size:13px" style-hover="background:var(--hair)">Open at Scandinavian Outdoor</button>
+          </article>
+
+          <button style="min-height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8.4px;padding:16.8px;border-radius:8px;border:1px dashed var(--divider);color:var(--muted)" style-hover="border-color:var(--accent);color:var(--accent)">
+            <i class="ph ph-plus" style="font-size:20px"></i>
+            <span style="font-size:13px">Add a fourth boot</span>
+            <span style="font-size:11px;color:var(--faint);max-width:150px;text-align:center">Pick from Hiking, or paste a link from any store</span>
+          </button>
+        </div>
+
+        <div style="display:flex;align-items:flex-start;gap:8.4px;margin-top:16.8px;padding:11.2px 16.8px;border-radius:8px;background:var(--surface);box-shadow:var(--shadow-sm);font-size:12.5px;color:var(--muted);line-height:1.5">
+          <i class="ph ph-lightbulb" style="color:var(--accent);font-size:15px;margin-top:2px"></i>
+          <span>The Lowa is 41 € cheaper today, but it almost always costs about this much — you'd save nothing by waiting. The Meindl is the one that's actually unusually cheap: 18% under its own typical price, and only 21 € off your target. If it doesn't reach 199 € by the autumn sale, it probably will in November.</span>
+        </div>
+      </section>
+      </sc-if>
+
+    </main>
+  </div>
+ </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dark&quot;,&quot;light&quot;],&quot;default&quot;:&quot;dark&quot;,&quot;tsType&quot;:&quot;'dark' | 'light'&quot;,&quot;section&quot;:&quot;Appearance&quot;},&quot;cardLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;grid&quot;,&quot;rows&quot;],&quot;default&quot;:&quot;grid&quot;,&quot;tsType&quot;:&quot;'grid' | 'rows'&quot;,&quot;section&quot;:&quot;Catalog&quot;},&quot;compareView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;cards&quot;,&quot;overlay&quot;],&quot;default&quot;:&quot;cards&quot;,&quot;tsType&quot;:&quot;'cards' | 'overlay'&quot;,&quot;section&quot;:&quot;Comparison&quot;}}">
+class Component extends DCLogic {
+  state = {
+    screen: 'catalog',
+    theme: this.props.theme ?? 'dark',
+    layout: this.props.cardLayout ?? 'grid',
+    compare: this.props.compareView ?? 'cards',
+    target: '199',
+    alert: true,
+  };
+
+  sel(on) { return on ? 'var(--accent)' : 'var(--muted)'; }
+  ring(on) { return on ? 'inset 0 0 0 1px var(--accent)' : 'none'; }
+
+  get rowData() {
+    if (this._rows) return this._rows;
+    const raw = [
+      ['Meindl Bhutan MFS trekking boot', 'Partioaitta', 'P', '219,90 €', '−18%', '18% under usual', 'Target 199 € · 21 € to go', 70, true, '0,5 9,4 18,7 27,6 36,8 45,7 54,9 63,15 72,16'],
+      ['Salomon XA Pro 3D v9 trail shoe', 'Verkkokauppa.com', 'V', '114,90 €', '−24%', '21% under usual', 'Below target 119 €', 100, true, '0,4 9,6 18,5 27,8 36,6 45,10 54,9 63,13 72,17'],
+      ['Fjällräven Keb trekking trousers', 'Partioaitta', 'P', '188,50 €', '−22%', '19% under usual', 'Target 160 € · 28 € to go', 65, true, '0,6 9,5 18,6 27,4 36,7 45,6 54,8 63,14 72,15'],
+      ['Muuto Fiber side chair, oak base', 'Nordic Nest', 'N', '249,00 €', '−14%', '11% under usual', 'Target 230 € · 19 € to go', 67, true, '0,7 9,7 18,6 27,7 36,5 45,7 54,6 63,11 72,12'],
+      ['Lowa Renegade GTX Mid', 'XXL', 'X', '179,00 €', '−11%', '6% under usual', 'Target 165 € · 14 € to go', 78, true, '0,8 9,7 18,9 27,7 36,8 45,6 54,7 63,10 72,11'],
+      ['Hanwag Alaska GTX', 'Scandinavian Outdoor', 'S', '289,00 €', '', '4% over usual', 'Target 250 € · 39 € to go', 34, false, '0,10 9,9 18,10 27,8 36,9 45,8 54,7 63,7 72,6'],
+      ['Primus Lite+ stove system', 'Scandinavian Outdoor', 'S', '89,90 €', '−9%', '7% under usual', 'Target 80 € · 10 € to go', 48, true, '0,6 9,6 18,5 27,7 36,6 45,7 54,6 63,9 72,10'],
+      ['Garmin Instinct 3 Solar 45 mm', 'Verkkokauppa.com', 'V', '329,00 €', '', 'at its usual', 'Target 299 € · 30 € to go', 22, true, '0,12 9,11 18,9 27,10 36,8 45,9 54,7 63,8 72,7'],
+      ['String Pocket shelf, walnut', 'Finnish Design Shop', 'F', '189,00 €', '−6%', '5% under usual', 'Target 170 € · 19 € to go', 38, true, '0,7 9,6 18,7 27,6 36,6 45,5 54,6 63,8 72,9'],
+      ['Artek Aalto Stool 60, birch', 'Vepsäläinen', 'V', '289,00 €', '', '2% over usual', 'Target 260 € · 29 € to go', 18, true, '0,11 9,10 18,10 27,9 36,9 45,8 54,8 63,7 72,7'],
+    ];
+    this._rows = raw.map((r, i) => {
+      const good = !!r[4];
+      return {
+        title: r[0], store: r[1], initial: r[2], price: r[3],
+        badgeText: r[4], hasBadge: !!r[4], vs: r[5], targetLabel: r[6],
+        barWidth: r[7] + '%',
+        barColor: good ? 'var(--accent)' : 'var(--faint)',
+        stock: r[8] ? 'In stock' : 'Out of stock',
+        stockColor: r[8] ? 'var(--good-text)' : 'var(--faint)',
+        sparkPoints: r[9],
+        sparkColor: good ? 'var(--good)' : 'var(--faint)',
+        key: i,
+      };
+    });
+    return this._rows;
+  }
+
+  renderVals() {
+    const s = this.state;
+    const nav = (k) => (s.screen === k ? 'var(--accent)' : 'var(--muted)');
+    return {
+      theme: s.theme,
+      toggleTheme: () => this.setState({ theme: s.theme === 'dark' ? 'light' : 'dark' }),
+      isCatalog: s.screen === 'catalog',
+      isDetail: s.screen === 'detail',
+      isCompare: s.screen === 'compare',
+      goCatalog: () => this.setState({ screen: 'catalog' }),
+      goDetail: () => this.setState({ screen: 'detail' }),
+      goCompare: () => this.setState({ screen: 'compare' }),
+      navCatalog: nav('catalog'), navDetail: nav('detail'), navCompare: nav('compare'),
+      isGrid: s.layout === 'grid',
+      isRows: s.layout === 'rows',
+      setGrid: () => this.setState({ layout: 'grid' }),
+      setRows: () => this.setState({ layout: 'rows' }),
+      layoutGridColor: this.sel(s.layout === 'grid'),
+      layoutRowsColor: this.sel(s.layout === 'rows'),
+      layoutGridRing: this.ring(s.layout === 'grid'),
+      layoutRowsRing: this.ring(s.layout === 'rows'),
+      isOverlay: s.compare === 'overlay',
+      setCards: () => this.setState({ compare: 'cards' }),
+      setOverlay: () => this.setState({ compare: 'overlay' }),
+      cmpCardsColor: this.sel(s.compare === 'cards'),
+      cmpOverlayColor: this.sel(s.compare === 'overlay'),
+      cmpCardsRing: this.ring(s.compare === 'cards'),
+      cmpOverlayRing: this.ring(s.compare === 'overlay'),
+      rows: this.rowData,
+      targetValue: s.target,
+      onTarget: (e) => this.setState({ target: e.target.value }),
+      alertLabel: s.alert ? 'Alert on' : 'Alert off',
+      toggleAlert: () => this.setState({ alert: !s.alert }),
+      alertBorder: s.alert ? 'var(--accent)' : 'var(--divider)',
+      alertColor: s.alert ? 'var(--accent)' : 'var(--muted)',
+      alertTrack: s.alert ? 'var(--accent)' : 'var(--chip)',
+      alertKnob: s.alert ? '13px' : '2px',
+      alertKnobColor: s.alert ? 'var(--bg)' : 'var(--muted)',
+    };
+  }
+}
+</script>
+</body>
+</html>
