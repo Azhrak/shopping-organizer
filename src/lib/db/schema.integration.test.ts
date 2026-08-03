@@ -15,7 +15,10 @@ describe("001_initial schema", () => {
 	it("stores prices as integer minor units and reads them back as numbers", async () => {
 		const item = await db
 			.insertInto("items")
-			.values({ url: "https://verkkokauppa.com/x", store_hostname: "verkkokauppa.com" })
+			.values({
+				url: "https://verkkokauppa.com/x",
+				store_hostname: "verkkokauppa.com",
+			})
 			.returning("id")
 			.executeTakeFirstOrThrow();
 
