@@ -9,7 +9,7 @@ import {
 	trailingWindowStart,
 } from "~/lib/core/pricing";
 import type { DB } from "~/lib/db/types";
-import type { ExtractPriceFn } from "~/lib/extraction/types";
+import type { ExtractPriceFn, PriceResult } from "~/lib/extraction/types";
 import { toMinorUnits } from "~/lib/money";
 import { normaliseUrl } from "~/lib/url";
 
@@ -103,7 +103,27 @@ export async function addItem(
 		};
 	}
 
-	const result = await deps.extractPrice(normalised.url);
+	// As in checkItem: a throwing extractor must not lose the URL. Saving the
+	// item with extract_failing = true is the whole point of this function's
+	// contract, and that applies whether extraction returned ok:false or blew
+	// up outright.
+	let result: PriceResult;
+	try {
+		result = await deps.extractPrice(normalised.url);
+	} catch (error) {
+		result = {
+			ok: false,
+			url: normalised.url,
+			price: null,
+			currency: null,
+			title: null,
+			image: null,
+			availability: "unknown",
+			method: null,
+			error: error instanceof Error ? error.message : "extraction threw",
+		};
+	}
+
 	const minorPrice =
 		result.ok && result.price !== null ? toMinorUnits(result.price) : null;
 
@@ -216,7 +236,29 @@ export async function checkItem(
 		throw new ItemNotFoundError(itemId);
 	}
 
-	const result = await deps.extractPrice(item.url);
+	// A throwing extractor is treated exactly like an ok:false result. The
+	// contract says it returns ok:false rather than throwing, but a network
+	// error, a DNS failure or a bug inside the module will throw anyway — and
+	// if that escaped here, the failure would never be recorded, next_check_at
+	// would never advance, and the item would be retried on every single run
+	// instead of backing off.
+	let result: PriceResult;
+	try {
+		result = await deps.extractPrice(item.url);
+	} catch (error) {
+		result = {
+			ok: false,
+			url: item.url,
+			price: null,
+			currency: null,
+			title: null,
+			image: null,
+			availability: "unknown",
+			method: null,
+			error: error instanceof Error ? error.message : "extraction threw",
+		};
+	}
+
 	const minorPrice =
 		result.ok && result.price !== null ? toMinorUnits(result.price) : null;
 	const usable = result.ok && minorPrice !== null;

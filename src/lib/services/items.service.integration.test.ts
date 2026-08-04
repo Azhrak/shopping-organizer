@@ -535,3 +535,118 @@ describe("findDueItems", () => {
 		expect(due).toHaveLength(3);
 	});
 });
+
+/**
+ * The extractor contract says it returns ok:false rather than throwing, but a
+ * network error, a DNS failure or a bug inside the module throws anyway.
+ *
+ * This was a real bug: an extractor that threw skipped checkItem's failure
+ * branch entirely, so consecutive_failures never incremented and
+ * next_check_at never advanced — the item stayed permanently due and was
+ * retried on every scheduler run, exactly the hammering the backoff exists to
+ * prevent. The fake extractor in the tests above only ever returned ok:false,
+ * so nothing caught it.
+ */
+describe("a throwing extractor", () => {
+	beforeEach(async () => {
+		await resetTestDatabase();
+	});
+
+	function throwingDeps(message = "socket hang up"): ServiceDeps {
+		return {
+			db,
+			extractPrice: async () => {
+				throw new Error(message);
+			},
+		};
+	}
+
+	it("still saves the item when addItem's extractor throws", async () => {
+		const result = await addItem(throwingDeps(), "https://a.example/1");
+
+		expect(result.created).toBe(true);
+		expect(result.extractFailing).toBe(true);
+		expect(result.error).toBe("socket hang up");
+
+		const saved = await db
+			.selectFrom("items")
+			.select(["url", "extract_failing", "consecutive_failures"])
+			.executeTakeFirstOrThrow();
+
+		expect(saved.url).toBe("https://a.example/1");
+		expect(saved.extract_failing).toBe(true);
+		expect(saved.consecutive_failures).toBe(1);
+	});
+
+	it("records failure state when checkItem's extractor throws", async () => {
+		const added = await addItem(throwingDeps(), "https://a.example/1");
+
+		const before = await db
+			.selectFrom("items")
+			.select("next_check_at")
+			.where("id", "=", added.itemId)
+			.executeTakeFirstOrThrow();
+
+		const result = await checkItem(throwingDeps("ECONNREFUSED"), added.itemId);
+
+		expect(result.ok).toBe(false);
+		expect(result.error).toBe("ECONNREFUSED");
+		expect(result.consecutiveFailures).toBe(2);
+
+		const after = await db
+			.selectFrom("items")
+			.select(["extract_failing", "consecutive_failures", "next_check_at"])
+			.where("id", "=", added.itemId)
+			.executeTakeFirstOrThrow();
+
+		expect(after.extract_failing).toBe(true);
+		expect(after.consecutive_failures).toBe(2);
+		// The whole point: the retry must be pushed further out each time.
+		expect((after.next_check_at as Date).getTime()).toBeGreaterThan(
+			(before.next_check_at as Date).getTime(),
+		);
+	});
+
+	it("backs off further on each successive throw", async () => {
+		const added = await addItem(throwingDeps(), "https://a.example/1");
+
+		const delays: Array<number> = [];
+		for (let i = 0; i < 3; i++) {
+			await db
+				.updateTable("items")
+				.set({ next_check_at: new Date() })
+				.where("id", "=", added.itemId)
+				.execute();
+
+			const at = Date.now();
+			const result = await checkItem(throwingDeps(), added.itemId);
+			delays.push(result.nextCheckAt.getTime() - at);
+		}
+
+		expect(delays[1]).toBeGreaterThan(delays[0] as number);
+		expect(delays[2]).toBeGreaterThan(delays[1] as number);
+	});
+
+	it("writes no price_check row when the extractor throws", async () => {
+		const added = await addItem(throwingDeps(), "https://a.example/1");
+		await checkItem(throwingDeps(), added.itemId);
+
+		const rows = await db.selectFrom("price_checks").selectAll().execute();
+
+		expect(rows).toHaveLength(0);
+	});
+
+	it("reports a non-Error throw without serialising it to {}", async () => {
+		const deps: ServiceDeps = {
+			db,
+			extractPrice: async () => {
+				throw "just a string";
+			},
+		};
+
+		const result = await addItem(deps, "https://a.example/1");
+
+		expect(result.extractFailing).toBe(true);
+		expect(result.error).toBe("extraction threw");
+	});
+});
