@@ -3,12 +3,11 @@
 Setup, scripts and architecture are in [README.md](README.md). What follows is
 only what the code cannot tell you.
 
-## extractPrice is a placeholder that throws
+## Keep the server-only import in extractPrice
 
-`src/lib/extraction/extractPrice.server.ts` is not implemented. It throws
-rather than returning a fake price, so anything that tracks a price fails at
-runtime until the real module is dropped in. Do not write code assuming it
-works, and never make it return a plausible value to get past an error.
+`src/lib/extraction/extractPrice.server.ts` is implemented — it owns the
+network half (fetch, timeouts, size limits), while all HTML interpretation
+lives in the pure, fixture-tested `./parse`.
 
 Keep its `import "@tanstack/react-start/server-only"` line — that is what keeps
 cheerio and outbound fetch out of every client bundle.

@@ -47,9 +47,11 @@ badge, and `deriveSelector` against a DOM nobody has tested it on.
 | Build | `pnpm build` works without a `NODE_ENV` prefix |
 | Line endings | Pinned to LF via `.gitattributes` |
 
-Verification at the last commit: **204 unit**, **93 integration**, `tsc` clean,
-`pnpm lint` exits 0, production build succeeds, and a booted server renders
-prices with the correct U+00A0 separators.
+Verification, re-run at `62bfe60` on 2026-08-04: **204 unit**, **93
+integration**, `tsc` clean, `pnpm lint` exits 0, production build succeeds, and
+`pnpm build:extension` leaves the checked-in generated copy unchanged. The
+booted-server check of U+00A0 separators is from the commit before and was not
+repeated.
 
 ---
 
@@ -129,7 +131,8 @@ browser already does. Reasoning is in
 
 ## Housekeeping
 
-- `HEAD` is 1 commit ahead of `origin/main` (`6a1f0aa`, the Biome update).
+- `HEAD` is 2 commits ahead of `origin/main` (`6a1f0aa` Biome, `62bfe60` this
+  file). Nothing has been pushed yet.
 - Do not install Biome globally. It is pinned as a devDependency at 2.5.7 and
   `pnpm lint` uses that copy; a global one at a different version fights it.
 - `extension/shared.generated.js` is generated. Edit the TypeScript sources and
