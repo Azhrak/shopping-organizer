@@ -22,7 +22,8 @@
     "db:codegen": "kysely-codegen --out-file=src/lib/db/types.ts",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "check:due": "tsx --env-file=.env scripts/check-due.ts"
   },
   "dependencies": {
     "@fontsource/inter": "5.3.0",
