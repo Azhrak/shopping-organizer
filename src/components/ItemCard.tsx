@@ -211,6 +211,12 @@ export function ItemCard({ item }: { item: ItemListEntry }) {
 					<span className="rounded bg-[color-mix(in_srgb,var(--color-faint)_25%,transparent)] px-2 py-0.5 text-[11px] text-muted">
 						Not tracking · {item.consecutiveFailures} failed checks
 					</span>
+				) : item.priceSelectorFailing ? (
+					// Only when extraction itself is fine: a stale pick still yields a
+					// price via the generic cascade, so "not tracking" would be a lie.
+					<span className="rounded bg-[color-mix(in_srgb,var(--color-faint)_25%,transparent)] px-2 py-0.5 text-[11px] text-muted">
+						Picked price no longer found
+					</span>
 				) : null}
 
 				<TargetBar item={item} />

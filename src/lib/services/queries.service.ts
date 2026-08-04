@@ -58,6 +58,12 @@ export interface ItemListEntry {
 	folder: string;
 	targetPrice: number | null;
 	extractFailing: boolean;
+	/**
+	 * A user-picked selector stopped matching. Extraction still succeeds via the
+	 * generic cascade, so this is not a tracking failure — it is the only signal
+	 * the user gets that the pick is stale and worth redoing.
+	 */
+	priceSelectorFailing: boolean;
 	consecutiveFailures: number;
 	createdAt: Date;
 	archivedAt: Date | null;
@@ -147,6 +153,7 @@ export async function listItems(
 			"i.folder",
 			"i.target_price",
 			"i.extract_failing",
+			"i.price_selector_failing",
 			"i.consecutive_failures",
 			"i.created_at",
 			"i.archived_at",
@@ -235,6 +242,7 @@ export async function listItems(
 		folder: r.folder,
 		targetPrice: r.target_price,
 		extractFailing: r.extract_failing,
+		priceSelectorFailing: r.price_selector_failing,
 		consecutiveFailures: r.consecutive_failures,
 		createdAt: r.created_at as Date,
 		archivedAt: r.archived_at as Date | null,
@@ -426,6 +434,10 @@ export interface ItemDetail {
 	notes: string | null;
 	extractMethod: ExtractMethod | null;
 	extractFailing: boolean;
+	/** The CSS selector the user picked in the extension, if any. */
+	priceSelector: string | null;
+	/** See ItemListEntry.priceSelectorFailing. */
+	priceSelectorFailing: boolean;
 	consecutiveFailures: number;
 	createdAt: Date;
 	archivedAt: Date | null;
@@ -494,6 +506,8 @@ export async function getItemDetail(
 		notes: item.notes,
 		extractMethod: item.extract_method as ExtractMethod | null,
 		extractFailing: item.extract_failing,
+		priceSelector: item.price_selector,
+		priceSelectorFailing: item.price_selector_failing,
 		consecutiveFailures: item.consecutive_failures,
 		createdAt: item.created_at as Date,
 		archivedAt: item.archived_at as Date | null,

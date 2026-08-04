@@ -25,6 +25,8 @@ async function makeItem(
 		folder?: string;
 		archived?: boolean;
 		title?: string;
+		priceSelector?: string | null;
+		priceSelectorFailing?: boolean;
 	} = {},
 ): Promise<string> {
 	const row = await db
@@ -36,6 +38,8 @@ async function makeItem(
 			folder: overrides.folder ?? "inbox",
 			target_price: overrides.targetPrice ?? null,
 			archived_at: overrides.archived ? new Date() : null,
+			price_selector: overrides.priceSelector ?? null,
+			price_selector_failing: overrides.priceSelectorFailing ?? false,
 		})
 		.returning("id")
 		.executeTakeFirstOrThrow();
@@ -501,5 +505,64 @@ describe("getItemDetail — previousPrice", () => {
 
 		expect(detail?.stats.current).toBe(5000);
 		expect(detail?.previousPrice).toBe(6000);
+	});
+});
+
+/**
+ * A stale user-picked selector degrades silently to the generic cascade, which
+ * is correct but leaves the user with no reason to re-pick. The read model has
+ * to carry the flag before any UI can say so.
+ */
+describe("priceSelectorFailing", () => {
+	beforeEach(async () => {
+		await resetTestDatabase();
+	});
+
+	it("is false for an item that never had a picked selector", async () => {
+		await makeItem("https://a.example/1");
+
+		const [entry] = await listItems(db);
+
+		expect(entry?.priceSelectorFailing).toBe(false);
+	});
+
+	it("is exposed on the list entry when the picked selector is failing", async () => {
+		await makeItem("https://a.example/1", {
+			priceSelector: ".price",
+			priceSelectorFailing: true,
+		});
+
+		const [entry] = await listItems(db);
+
+		expect(entry?.priceSelectorFailing).toBe(true);
+	});
+
+	it("stays false while the picked selector still works", async () => {
+		await makeItem("https://a.example/1", { priceSelector: ".price" });
+
+		const [entry] = await listItems(db);
+
+		expect(entry?.priceSelectorFailing).toBe(false);
+	});
+
+	it("is exposed on the detail view alongside the selector itself", async () => {
+		const id = await makeItem("https://a.example/1", {
+			priceSelector: ".price",
+			priceSelectorFailing: true,
+		});
+
+		const detail = await getItemDetail(db, id);
+
+		expect(detail?.priceSelectorFailing).toBe(true);
+		expect(detail?.priceSelector).toBe(".price");
+	});
+
+	it("reports no selector on the detail view when none was picked", async () => {
+		const id = await makeItem("https://a.example/1");
+
+		const detail = await getItemDetail(db, id);
+
+		expect(detail?.priceSelector).toBeNull();
+		expect(detail?.priceSelectorFailing).toBe(false);
 	});
 });

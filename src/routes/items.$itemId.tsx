@@ -205,6 +205,23 @@ function ItemDetailPage() {
 							</p>
 						) : null}
 
+						{item.priceSelectorFailing ? (
+							<p className="rounded-lg bg-surface p-3 text-sm text-muted shadow-card">
+								The price you picked on this page is no longer found
+								{item.priceSelector ? (
+									<>
+										{" — "}
+										<code className="font-mono text-[12px]">
+											{item.priceSelector}
+										</code>
+									</>
+								) : null}
+								. Prices are still being read the generic way, so tracking
+								continues — but the store has most likely changed its layout,
+								and picking the price again will be more reliable.
+							</p>
+						) : null}
+
 						<div className="rounded-lg bg-surface p-4 shadow-card">
 							<div className="flex items-baseline gap-2">
 								<span className="text-[34px] font-semibold tracking-[-0.03em] text-text">

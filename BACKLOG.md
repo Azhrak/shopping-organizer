@@ -44,23 +44,26 @@ badge, and `deriveSelector` against a DOM nobody has tested it on.
 | **Price extractor** | Real implementation — JSON-LD → microdata → meta → selectors |
 | **Picker (server side)** | `price_selector`, `deriveSelector`, observed prices |
 | **Picker (extension)** | Overlay written — **not yet run in a browser** |
+| Stale-pick indicator | `priceSelectorFailing` on card + detail page |
 | Build | `pnpm build` works without a `NODE_ENV` prefix |
 | Line endings | Pinned to LF via `.gitattributes` |
 
-Verification, re-run at `62bfe60` on 2026-08-04: **204 unit**, **93
-integration**, `tsc` clean, `pnpm lint` exits 0, production build succeeds, and
+Verification, re-run on 2026-08-04: **204 unit**, **98 integration**, `tsc`
+clean, `pnpm lint` exits 0, production build succeeds, and
 `pnpm build:extension` leaves the checked-in generated copy unchanged. The
-booted-server check of U+00A0 separators is from the commit before and was not
-repeated.
+stale-pick indicator was also checked against a booted server with a seeded
+failing item: both the card badge and the detail banner render, and a healthy
+item shows neither. The U+00A0 separator check is older and was not repeated.
 
 ---
 
 ## Next up
 
 ### 1. Verify the picker in a browser
-See **Pick up here**. Nothing below it should start first — browser checking
-depends on the picker working, and the hardcoded selectors below are best
-replaced by picked ones rather than guessed harder.
+See **Pick up here**. Still the next thing: browser checking depends on the
+picker working, the hardcoded selectors below are best replaced by picked ones
+rather than guessed harder, and the re-pick trigger in item 3 cannot be built
+until there is a picker known to work.
 
 ### 2. Browser checking
 Design: [design/browser-checking.md](design/browser-checking.md). Not started —
@@ -78,12 +81,19 @@ price has rendered", so the only well-defined thing to wait for is a selector
 the user picked. Without one, an empty read cannot be distinguished from a slow
 one.
 
-### 3. Surface `price_selector_failing` in the UI
-The column exists and `checkItem` maintains it, but nothing displays it. A
-stale selector currently degrades silently to the generic cascade — correct
-behaviour, but the user is never told to re-pick.
+### 3. Offer a re-pick when `price_selector_failing` is set
+The **indicator half is done**: `priceSelectorFailing` is carried on both
+`ItemListEntry` and `ItemDetail`, the card shows a "Picked price no longer
+found" badge, and the detail page explains that tracking continues via the
+generic cascade and names the dead selector.
 
-Needs: an indicator on the item, and a way to trigger a re-pick.
+What is left is the re-pick trigger, and it is blocked on the browser pass
+above. A selector can only reach the server through `/api/ingest` from the
+extension — there is no server function that updates `price_selector` on an
+existing item — so any affordance has to drive a picker nobody has run yet.
+
+A cheaper intermediate, if the re-pick stays blocked: extend `updateItemFn` to
+*clear* a stale selector, which needs no extension work.
 
 ---
 
@@ -131,8 +141,8 @@ browser already does. Reasoning is in
 
 ## Housekeeping
 
-- `HEAD` is 2 commits ahead of `origin/main` (`6a1f0aa` Biome, `62bfe60` this
-  file). Nothing has been pushed yet.
+- `HEAD` is 4 commits ahead of `origin/main`, starting at `6a1f0aa` (Biome).
+  Nothing has been pushed yet.
 - Do not install Biome globally. It is pinned as a devDependency at 2.5.7 and
   `pnpm lint` uses that copy; a global one at a different version fights it.
 - `extension/shared.generated.js` is generated. Edit the TypeScript sources and
