@@ -100,6 +100,31 @@ body {
 	cursor: default;
 }
 
+/* Secondary action: same shape, quieter, so the bulk grab stays the default. */
+.secondary {
+	width: 100%;
+	height: 36px;
+	margin-top: 8px;
+	border: 1px solid var(--divider);
+	border-radius: 8px;
+	background: none;
+	color: var(--text);
+	font: inherit;
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.secondary:hover:not(:disabled) {
+	border-color: var(--accent);
+	color: var(--accent);
+}
+
+.secondary:disabled {
+	border-color: var(--divider);
+	color: var(--faint);
+	cursor: default;
+}
+
 .result {
 	margin-top: 12px;
 	padding: 10px;

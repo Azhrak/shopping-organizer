@@ -23,7 +23,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "check:due": "tsx --env-file=.env scripts/check-due.ts"
+    "check:due": "tsx --env-file=.env scripts/check-due.ts",
+    "build:extension": "tsx scripts/build-extension-shared.ts"
   },
   "dependencies": {
     "@fontsource/inter": "5.3.0",

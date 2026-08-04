@@ -12,7 +12,8 @@
 			"**/extension/**/*",
 			"**/*.config.ts",
 			"!**/src/routeTree.gen.ts",
-			"!**/src/lib/db/types.ts"
+			"!**/src/lib/db/types.ts",
+			"!**/extension/shared.generated.js"
 		]
 	},
 	"formatter": {

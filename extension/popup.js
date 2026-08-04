@@ -1,14 +1,22 @@
 import { configProblem, loadConfig } from "./config.js";
 
 /**
- * One button: collect every open http(s) tab and hand it to the service
- * worker, which performs the request and survives this popup closing.
+ * Two actions:
  *
- * No content scripts — the server fetches and parses each page itself, so the
- * extension never needs to touch page content.
+ *   "Grab open tabs" — collect every open http(s) tab and hand it to the
+ *   service worker, which performs the request and survives this popup closing.
+ *
+ *   "Point at the price" — inject the picker into the active tab so the user
+ *   can click the price directly. This is how a store the server cannot read
+ *   (bot-blocked, or JS-rendered) gets a real price: the user's own browser
+ *   already rendered the page.
+ *
+ * The picker is injected on demand rather than declared as a content script,
+ * so nothing runs on pages the user is merely visiting.
  */
 
 const grabButton = document.getElementById("grab");
+const pickButton = document.getElementById("pick");
 const summary = document.getElementById("summary");
 const result = document.getElementById("result");
 const failures = document.getElementById("failures");
@@ -69,6 +77,31 @@ function showFailures(entries) {
 
 let urls = [];
 
+/** The active tab, when it is a page the picker can actually be injected into. */
+async function pickableTab() {
+	const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+	if (!tab?.url || tab.id === undefined) {
+		return null;
+	}
+
+	try {
+		const { protocol } = new URL(tab.url);
+		// chrome://, about:, file: and the Web Store all refuse injection. Better
+		// to disable the button than to fail on click.
+		if (protocol !== "http:" && protocol !== "https:") {
+			return null;
+		}
+		if (tab.url.startsWith("https://chromewebstore.google.com/")) {
+			return null;
+		}
+	} catch {
+		return null;
+	}
+
+	return tab;
+}
+
 async function init() {
 	urls = await collectUrls();
 
@@ -81,8 +114,16 @@ async function init() {
 		return;
 	}
 
+	// The picker only needs the active tab, so it stays available even when the
+	// bulk grab has nothing to do.
+	const tab = await pickableTab();
+	pickButton.disabled = tab === null;
+
 	if (urls.length === 0) {
-		summary.textContent = "No http(s) tabs are open.";
+		summary.textContent =
+			tab === null
+				? "No http(s) tabs are open."
+				: "No tabs to grab — but you can point at a price here.";
 		return;
 	}
 
@@ -121,6 +162,21 @@ grabButton.addEventListener("click", async () => {
 	show(parts.join(" · "), response.failed > 0 ? "warn" : "ok");
 	showFailures(response.results ?? []);
 	grabButton.disabled = false;
+});
+
+pickButton.addEventListener("click", async () => {
+	const tab = await pickableTab();
+
+	if (!tab) {
+		show("This page cannot be picked from.", "warn");
+		return;
+	}
+
+	// Hand the whole flow to the worker and close immediately. Clicking into the
+	// page to pick moves focus, which closes this popup anyway — awaiting the
+	// result here would abort it every single time.
+	chrome.runtime.sendMessage({ type: "pick", tabId: tab.id });
+	window.close();
 });
 
 init();

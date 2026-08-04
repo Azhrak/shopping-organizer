@@ -2,11 +2,37 @@
 
 One button: capture every open http(s) tab and POST it to `/api/ingest`.
 
-Manifest V3, service worker only. No content scripts — the server fetches and
-parses each page itself, so the extension never reads page content and needs
-no per-site permission. No long-running timers either: an MV3 worker is
-terminated when idle, so anything on a `setInterval` would simply never fire.
-Everything happens inside a message handler.
+Manifest V3, service worker plus an on-demand price picker. No long-running
+timers: an MV3 worker is terminated when idle, so anything on a `setInterval`
+would simply never fire. Everything happens inside a message handler.
+
+There are no declared content scripts. The picker is injected only when the
+user clicks **Point at the price**, so nothing runs on pages they are merely
+visiting.
+
+## Point at the price
+
+For stores the server cannot read — Gigantti challenges non-browser clients,
+Power renders its prices with JavaScript — the server-side fetch will never see
+a price. The picker solves that by reading the page the user's own browser has
+already rendered:
+
+1. Open the product page, click the extension, then **Point at the price**.
+2. Hover: the element under the cursor is outlined and the price that would be
+   captured is previewed.
+3. Click to confirm. Escape or right-click cancels.
+
+The extension derives a CSS selector, **validates that it still matches exactly
+that element**, and posts it with the observed price. The selector is stored on
+the item and used by every later server-side check; the observed price is
+recorded immediately, so an item on a blocked store is never left empty.
+
+If no stable selector can be derived, the extension says so rather than storing
+a fragile one — the same refuse-over-guess rule the extractor follows.
+
+A price split across nodes (`<data value="11.99">11<small>,99</small></data>`,
+which is what Verkkokauppa emits) is handled: clicking the cents captures the
+whole price, not `,99`.
 
 ## Install (unpacked)
 
@@ -36,11 +62,21 @@ with a `key` in the manifest, avoids that.
 
 | File | Role |
 | --- | --- |
-| `manifest.json` | MV3 manifest. `tabs` + `storage` permissions only. |
-| `popup.html/.css/.js` | The one-button UI. Collects and de-duplicates tabs. |
-| `service-worker.js` | Performs the request; outlives the popup. |
+| `manifest.json` | MV3 manifest. `tabs`, `storage`, `scripting`. |
+| `popup.html/.css/.js` | The two-button UI. Collects and de-duplicates tabs. |
+| `service-worker.js` | Performs requests and drives the pick; outlives the popup. |
+| `picker-entry.js` | Injected bootstrap — loads `picker.js` as a module. |
+| `picker.js` | The hover/click overlay. Derives and validates the selector. |
+| `shared.generated.js` | **Generated.** Do not edit; run `pnpm build:extension`. |
 | `options.html/.js` | API address, shared secret, connection test. |
 | `config.js` | Shared `chrome.storage.sync` access and validation. |
+
+`shared.generated.js` is produced from `src/lib/extraction/deriveSelector.ts`
+and `parsePriceString` in `src/lib/extraction/parse.ts`. Chrome loads this
+directory unpacked with no build step, so the code cannot be imported from
+`src/` — it is transpiled and copied instead. A test fails if the copy is
+stale, because a picker and a server that disagree about a selector or a parsed
+price would silently record the wrong number.
 
 The popup hands URLs to the service worker rather than fetching directly: a
 popup closes the instant focus moves, which would abort its own request

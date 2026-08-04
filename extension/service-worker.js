@@ -27,6 +27,8 @@ async function ingest(urls) {
 		return { ok: false, error: problem, needsConfig: true };
 	}
 
+	// Entries are either bare URL strings (the bulk grab) or objects carrying a
+	// picked selector and price. The route accepts both.
 	if (urls.length === 0) {
 		return { ok: false, error: "No http(s) tabs are open." };
 	}
@@ -88,20 +90,136 @@ async function ingest(urls) {
 	return { ok: true, ...body };
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-	if (message?.type !== "ingest") {
-		return false;
+/**
+ * Inject the picker into a tab, then ingest whatever the user pointed at.
+ *
+ * Driven from here rather than the popup because clicking into the page moves
+ * focus, which closes the popup — an awaited result there would be aborted
+ * every time. The worker outlives that.
+ *
+ * The badge is the only feedback available once the popup is gone, so it
+ * reports the outcome.
+ */
+async function pick(tabId) {
+	if (typeof tabId !== "number") {
+		return { ok: false, error: "No tab to pick from." };
 	}
 
-	ingest(Array.isArray(message.urls) ? message.urls : [])
-		.then(sendResponse)
-		.catch((error) =>
-			sendResponse({
-				ok: false,
-				error: error instanceof Error ? error.message : "Unknown error",
-			}),
-		);
+	const config = await loadConfig();
+	const problem = configProblem(config);
 
-	// Keeps the message channel open for the async reply above.
-	return true;
+	if (problem) {
+		await badge("!", "#b3261e", problem);
+		return { ok: false, error: problem, needsConfig: true };
+	}
+
+	let injected;
+	try {
+		[injected] = await chrome.scripting.executeScript({
+			target: { tabId },
+			// The picker is a module because it imports the shared selector and
+			// price code; func-injection cannot carry an import.
+			files: ["picker-entry.js"],
+		});
+	} catch (error) {
+		const detail =
+			error instanceof Error ? error.message : "could not inject the picker";
+		await badge("!", "#b3261e", detail);
+		return { ok: false, error: detail };
+	}
+
+	void injected;
+
+	// picker-entry.js reports the pick back through a separate message rather
+	// than a return value: executeScript resolves as soon as the module's top
+	// level finishes, long before the user has clicked anything.
+	return { ok: true, started: true };
+}
+
+async function badge(text, colour, title) {
+	await chrome.action.setBadgeText({ text });
+	await chrome.action.setBadgeBackgroundColor({ color: colour });
+
+	if (title) {
+		await chrome.action.setTitle({ title: `Hintavahti — ${title}` });
+	}
+}
+
+/** Save a completed pick, which is an ingest with the captured fields attached. */
+async function savePick(pick_) {
+	const entry = {
+		url: pick_.url,
+		priceSelector: pick_.selector,
+		observedPrice: pick_.price,
+	};
+
+	if (pick_.currency) {
+		entry.observedCurrency = pick_.currency;
+	}
+
+	const response = await ingest([entry]);
+
+	if (response.ok) {
+		const saved = response.results?.[0];
+		await badge(
+			"✓",
+			"#1b7f3b",
+			saved?.created === false ? "selector updated" : "price saved",
+		);
+	} else {
+		await badge("!", "#b3261e", response.error ?? "save failed");
+	}
+
+	return response;
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+	if (message?.type === "ingest") {
+		ingest(Array.isArray(message.urls) ? message.urls : [])
+			.then(sendResponse)
+			.catch((error) =>
+				sendResponse({
+					ok: false,
+					error: error instanceof Error ? error.message : "Unknown error",
+				}),
+			);
+
+		// Keeps the message channel open for the async reply above.
+		return true;
+	}
+
+	if (message?.type === "pick") {
+		chrome.action.setBadgeText({ text: "…" });
+		pick(message.tabId)
+			.then(sendResponse)
+			.catch((error) =>
+				sendResponse({
+					ok: false,
+					error: error instanceof Error ? error.message : "Unknown error",
+				}),
+			);
+		return true;
+	}
+
+	if (message?.type === "picked") {
+		if (!message.result?.ok) {
+			const reason = message.result?.reason ?? "cancelled";
+			badge(reason === "cancelled" ? "" : "!", "#b3261e", reason).then(() =>
+				sendResponse({ ok: true }),
+			);
+			return true;
+		}
+
+		savePick(message.result)
+			.then(sendResponse)
+			.catch((error) =>
+				sendResponse({
+					ok: false,
+					error: error instanceof Error ? error.message : "Unknown error",
+				}),
+			);
+		return true;
+	}
+
+	return false;
 });

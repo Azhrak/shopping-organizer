@@ -3,7 +3,7 @@
 	"name": "Hintavahti",
 	"version": "0.1.0",
 	"description": "Save every open product tab to your Hintavahti price watch.",
-	"permissions": ["tabs", "storage"],
+	"permissions": ["tabs", "storage", "scripting"],
 	"host_permissions": ["http://localhost/*", "https://*/*"],
 	"action": {
 		"default_title": "Hintavahti",
@@ -16,5 +16,11 @@
 	"background": {
 		"service_worker": "service-worker.js",
 		"type": "module"
-	}
+	},
+	"web_accessible_resources": [
+		{
+			"resources": ["shared.generated.js", "picker.js", "picker-entry.js"],
+			"matches": ["http://*/*", "https://*/*"]
+		}
+	]
 }
