@@ -10,6 +10,8 @@ trailing 90-day low. Items live in folders, can be filtered by saved views
 ("dropped", "at target"), and up to four of them can be put side by side in a
 comparison group.
 
+Current state and what to work on next: [BACKLOG.md](BACKLOG.md).
+
 ## Stack
 
 TanStack Start (React 19, file-based routing, SSR) · Kysely + PostgreSQL 17 ·
