@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Hintavahti</title>
+		<link rel="stylesheet" href="popup.css" />
+	</head>
+	<body>
+		<header class="head">
+			<span class="mark">H</span>
+			<span class="title">Hintavahti</span>
+		</header>
+
+		<p id="summary" class="summary">Counting open tabs…</p>
+
+		<button id="grab" class="primary" type="button" disabled>
+			Grab open tabs
+		</button>
+
+		<div id="result" class="result" hidden></div>
+
+		<ul id="failures" class="failures" hidden></ul>
+
+		<footer class="foot">
+			<button id="options" class="link" type="button">Settings</button>
+		</footer>
+
+		<script type="module" src="popup.js"></script>
+	</body>
+</html>

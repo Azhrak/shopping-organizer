@@ -1,0 +1,150 @@
+/* Palette lifted from the app's design tokens so the two feel like one tool. */
+:root {
+	--bg: #161826;
+	--surface: #232532;
+	--text: #e9e9ed;
+	--muted: #9397ab;
+	--faint: #75798c;
+	--accent: #9184d9;
+	--accent-tint: rgba(145, 132, 217, 0.12);
+	--divider: rgba(233, 233, 237, 0.14);
+	--good: #4faa84;
+	--good-text: #8fd4b5;
+	--good-deep: #1f4a39;
+	--warn-text: #e7c78f;
+}
+
+@media (prefers-color-scheme: light) {
+	:root {
+		--bg: #f1f2f8;
+		--surface: #fbfbfe;
+		--text: #22242e;
+		--muted: #5f6376;
+		--faint: #8b8fa1;
+		--accent: #6a5db3;
+		--accent-tint: rgba(106, 93, 179, 0.1);
+		--divider: rgba(34, 36, 46, 0.14);
+		--good: #2f8a63;
+		--good-text: #1c6647;
+		--good-deep: #cfe9db;
+		--warn-text: #8a6417;
+	}
+}
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	width: 300px;
+	margin: 0;
+	padding: 14px;
+	background: var(--bg);
+	color: var(--text);
+	font:
+		14px / 1.5 Inter,
+		system-ui,
+		sans-serif;
+	-webkit-font-smoothing: antialiased;
+}
+
+.head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.mark {
+	display: grid;
+	place-items: center;
+	width: 22px;
+	height: 22px;
+	border: 1px solid var(--accent);
+	border-radius: 6px;
+	color: var(--accent);
+	font-size: 12px;
+}
+
+.title {
+	font-size: 15px;
+	font-weight: 500;
+	letter-spacing: -0.02em;
+}
+
+.summary {
+	margin: 0 0 12px;
+	color: var(--muted);
+	font-size: 13px;
+}
+
+.primary {
+	width: 100%;
+	height: 36px;
+	border: 1px solid var(--accent);
+	border-radius: 8px;
+	background: none;
+	color: var(--accent);
+	font: inherit;
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.primary:hover:not(:disabled) {
+	background: var(--accent-tint);
+}
+
+.primary:disabled {
+	border-color: var(--divider);
+	color: var(--faint);
+	cursor: default;
+}
+
+.result {
+	margin-top: 12px;
+	padding: 10px;
+	border-radius: 8px;
+	background: var(--surface);
+	font-size: 13px;
+}
+
+.result.ok {
+	background: var(--good-deep);
+	color: var(--good-text);
+}
+
+.result.warn {
+	color: var(--warn-text);
+}
+
+.failures {
+	max-height: 150px;
+	margin: 8px 0 0;
+	padding: 0 0 0 16px;
+	overflow-y: auto;
+	color: var(--faint);
+	font-size: 11.5px;
+	word-break: break-all;
+}
+
+.foot {
+	margin-top: 12px;
+	padding-top: 10px;
+	border-top: 1px solid var(--divider);
+	font-size: 12px;
+}
+
+/* A button, not an anchor: it opens the options page via the extension API
+   rather than navigating anywhere. */
+.link {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--muted);
+	font: inherit;
+	cursor: pointer;
+}
+
+.link:hover {
+	color: var(--accent);
+}
