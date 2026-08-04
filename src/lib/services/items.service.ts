@@ -9,7 +9,11 @@ import {
 	trailingWindowStart,
 } from "~/lib/core/pricing";
 import type { DB } from "~/lib/db/types";
-import type { ExtractPriceFn, PriceResult } from "~/lib/extraction/types";
+import type {
+	Availability,
+	ExtractPriceFn,
+	PriceResult,
+} from "~/lib/extraction/types";
 import { toMinorUnits } from "~/lib/money";
 import { normaliseUrl } from "~/lib/url";
 
@@ -64,6 +68,26 @@ export interface AddItemResult {
 	error?: string;
 }
 
+export interface AddItemOptions {
+	policy?: CheckPolicy;
+	/**
+	 * A CSS selector the user pointed at with the extension's picker. Stored on
+	 * the item and used by every later check.
+	 */
+	priceSelector?: string | null;
+	/**
+	 * The price the user's browser actually displayed, in MAJOR units — the
+	 * same unit as PriceResult.price, converted here by toMinorUnits().
+	 *
+	 * When supplied, no fetch happens: the browser already read the rendered
+	 * page, which is the whole point on stores the server cannot reach. This is
+	 * how an item on a bot-blocked or JS-rendered store gets a real first price.
+	 */
+	observedPrice?: number | null;
+	observedCurrency?: string | null;
+	observedAvailability?: Availability;
+}
+
 /**
  * Save a URL as a tracked item.
  *
@@ -77,7 +101,7 @@ export interface AddItemResult {
 export async function addItem(
 	deps: ServiceDeps,
 	rawUrl: string,
-	options: { policy?: CheckPolicy } = {},
+	options: AddItemOptions = {},
 ): Promise<AddItemResult> {
 	const policy = options.policy ?? DEFAULT_CHECK_POLICY;
 	const now = clock(deps);
@@ -94,6 +118,21 @@ export async function addItem(
 		.executeTakeFirst();
 
 	if (existing) {
+		// Re-adding a tracked URL is not an error, but a newly picked selector
+		// must not be discarded — re-picking a broken selector goes through this
+		// path, so silently ignoring it would make the picker appear to do
+		// nothing on exactly the items it exists to fix.
+		if (options.priceSelector !== undefined) {
+			await deps.db
+				.updateTable("items")
+				.set({
+					price_selector: options.priceSelector,
+					price_selector_failing: false,
+				})
+				.where("id", "=", existing.id)
+				.execute();
+		}
+
 		return {
 			itemId: existing.id,
 			created: false,
@@ -103,25 +142,45 @@ export async function addItem(
 		};
 	}
 
-	// As in checkItem: a throwing extractor must not lose the URL. Saving the
-	// item with extract_failing = true is the whole point of this function's
-	// contract, and that applies whether extraction returned ok:false or blew
-	// up outright.
+	// A browser-observed price skips extraction entirely: the user's own browser
+	// already rendered the page, which is the only way to get a price from a
+	// store that blocks or JS-renders. Fetching again here would either fail or
+	// contradict what the user just saw.
 	let result: PriceResult;
-	try {
-		result = await deps.extractPrice(normalised.url);
-	} catch (error) {
+
+	if (options.observedPrice != null) {
 		result = {
-			ok: false,
+			ok: true,
 			url: normalised.url,
-			price: null,
-			currency: null,
+			price: options.observedPrice,
+			currency: options.observedCurrency ?? null,
 			title: null,
 			image: null,
-			availability: "unknown",
-			method: null,
-			error: error instanceof Error ? error.message : "extraction threw",
+			availability: options.observedAvailability ?? "unknown",
+			method: "selector",
 		};
+	} else {
+		// As in checkItem: a throwing extractor must not lose the URL. Saving the
+		// item with extract_failing = true is the whole point of this function's
+		// contract, and that applies whether extraction returned ok:false or blew
+		// up outright.
+		try {
+			result = await deps.extractPrice(normalised.url, {
+				priceSelector: options.priceSelector,
+			});
+		} catch (error) {
+			result = {
+				ok: false,
+				url: normalised.url,
+				price: null,
+				currency: null,
+				title: null,
+				image: null,
+				availability: "unknown",
+				method: null,
+				error: error instanceof Error ? error.message : "extraction threw",
+			};
+		}
 	}
 
 	const minorPrice =
@@ -140,6 +199,9 @@ export async function addItem(
 			image: result.image,
 			currency: result.currency,
 			extract_method: usable ? result.method : null,
+			price_selector: options.priceSelector ?? null,
+			price_selector_failing:
+				options.priceSelector != null && result.userSelectorFailed === true,
 			extract_failing: !usable,
 			consecutive_failures: usable ? 0 : 1,
 			last_checked_at: now,
@@ -228,6 +290,7 @@ export async function checkItem(
 			"target_price",
 			"last_alert_price",
 			"consecutive_failures",
+			"price_selector",
 		])
 		.where("id", "=", itemId)
 		.executeTakeFirst();
@@ -244,7 +307,9 @@ export async function checkItem(
 	// instead of backing off.
 	let result: PriceResult;
 	try {
-		result = await deps.extractPrice(item.url);
+		result = await deps.extractPrice(item.url, {
+			priceSelector: item.price_selector,
+		});
 	} catch (error) {
 		result = {
 			ok: false,
@@ -262,6 +327,15 @@ export async function checkItem(
 	const minorPrice =
 		result.ok && result.price !== null ? toMinorUnits(result.price) : null;
 	const usable = result.ok && minorPrice !== null;
+
+	// A stored selector that stopped matching is recorded whether or not the
+	// cascade rescued the price, so the UI can prompt a re-pick while the item
+	// keeps working. Only written when a selector exists, so items without one
+	// are never touched.
+	const selectorFailing =
+		item.price_selector === null
+			? undefined
+			: result.userSelectorFailed === true;
 
 	if (!usable) {
 		const failures = item.consecutive_failures + 1;
@@ -281,6 +355,9 @@ export async function checkItem(
 				consecutive_failures: failures,
 				last_checked_at: now,
 				next_check_at: nextCheckAt,
+				...(selectorFailing === undefined
+					? {}
+					: { price_selector_failing: selectorFailing }),
 			})
 			.where("id", "=", item.id)
 			.execute();
@@ -355,6 +432,9 @@ export async function checkItem(
 				title: result.title,
 				image: result.image,
 				currency: result.currency,
+				...(selectorFailing === undefined
+					? {}
+					: { price_selector_failing: selectorFailing }),
 				...(drop.isDrop
 					? { last_alert_price: price, last_alerted_at: now }
 					: {}),

@@ -44,6 +44,8 @@ export interface Items {
   last_checked_at: Timestamp | null;
   next_check_at: Generated<Timestamp>;
   notes: string | null;
+  price_selector: string | null;
+  price_selector_failing: Generated<boolean>;
   store_hostname: string;
   target_price: number | null;
   title: string | null;

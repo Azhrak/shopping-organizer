@@ -32,8 +32,35 @@ const MAX_URLS = 200;
 /** Matches the extension's popup budget — see step 6. */
 const INGEST_CONCURRENCY = 4;
 
+/**
+ * An entry is either a bare URL — what "grab open tabs" has always sent — or an
+ * object carrying what the price picker captured. The union keeps the existing
+ * bulk path byte-for-byte compatible.
+ *
+ * `observedPrice` is in MAJOR units (14.99), matching PriceResult.price. The
+ * service layer converts to integer minor units via toMinorUnits(); nothing new
+ * converts here.
+ */
+const ingestEntrySchema = z.union([
+	z.string().min(1),
+	z.object({
+		url: z.string().min(1),
+		// Bounded to match the items_price_selector_length check constraint, so a
+		// too-long selector is a clean 400 rather than a database error.
+		priceSelector: z.string().min(1).max(500).optional(),
+		// A ceiling as well as a floor: the value is client-supplied, and a
+		// mis-parse writing an absurd price would silently skew every stat that
+		// averages over it.
+		observedPrice: z.number().positive().finite().max(10_000_000).optional(),
+		observedCurrency: z.string().length(3).optional(),
+		observedAvailability: z
+			.enum(["in_stock", "out_of_stock", "unknown"])
+			.optional(),
+	}),
+]);
+
 const ingestSchema = z.object({
-	urls: z.array(z.string().min(1)).min(1).max(MAX_URLS),
+	urls: z.array(ingestEntrySchema).min(1).max(MAX_URLS),
 });
 
 export type IngestEntry = {
@@ -45,6 +72,8 @@ export type IngestEntry = {
 	/** True when the item was saved but its price could not be extracted. */
 	extractFailing?: boolean;
 	title?: string | null;
+	/** Recorded price in MINOR units, when one was stored. */
+	price?: number | null;
 	error?: string;
 };
 
@@ -89,14 +118,36 @@ export const Route = createFileRoute("/api/ingest")({
 					);
 				}
 
-				// De-duplicate within the batch before doing any work: the extension
-				// captures every open tab, and the same product is often open twice.
-				const urls = [...new Set(parsed.data.urls.map((url) => url.trim()))];
+				// Normalise both entry shapes to one before doing any work.
+				const entries = parsed.data.urls.map((entry) =>
+					typeof entry === "string"
+						? { url: entry.trim() }
+						: { ...entry, url: entry.url.trim() },
+				);
+
+				// De-duplicate within the batch: the extension captures every open
+				// tab, and the same product is often open twice. Later entries win,
+				// so a picker capture beats a bare URL for the same page rather than
+				// being dropped by whichever happened to arrive first.
+				const byUrl = new Map<string, (typeof entries)[number]>();
+				for (const entry of entries) {
+					const previous = byUrl.get(entry.url);
+					byUrl.set(entry.url, previous ? { ...previous, ...entry } : entry);
+				}
+
+				const deduped = [...byUrl.values()];
+				const urls = deduped.map((entry) => entry.url);
 
 				const settled = await mapSettledWithConcurrency(
-					urls,
+					deduped,
 					INGEST_CONCURRENCY,
-					(url) => addItem(deps, url),
+					(entry) =>
+						addItem(deps, entry.url, {
+							priceSelector: entry.priceSelector,
+							observedPrice: entry.observedPrice,
+							observedCurrency: entry.observedCurrency,
+							observedAvailability: entry.observedAvailability,
+						}),
 				);
 
 				const results: Array<IngestEntry> = settled.map((outcome, index) => {
@@ -125,6 +176,7 @@ export const Route = createFileRoute("/api/ingest")({
 						created: result.created,
 						extractFailing: result.extractFailing,
 						title: result.title,
+						price: result.price,
 						// addItem saves the item even when extraction fails; surface why
 						// so the popup can distinguish "saved, untracked" from "saved".
 						error: result.error,

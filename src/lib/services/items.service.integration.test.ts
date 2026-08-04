@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "~/lib/db";
-import type { PriceResult } from "~/lib/extraction/types";
+import type { ExtractPriceOptions, PriceResult } from "~/lib/extraction/types";
 import { resetTestDatabase } from "~/test/db";
 import {
 	addItem,
@@ -20,9 +20,12 @@ import {
 function fakeExtractor() {
 	const queue: Array<PriceResult> = [];
 	const calls: Array<string> = [];
+	/** Options each call received, so tests can assert what was threaded through. */
+	const callOptions: Array<ExtractPriceOptions | undefined> = [];
 
 	return {
 		calls,
+		callOptions,
 		queueSuccess(price: number, extra: Partial<PriceResult> = {}) {
 			queue.push({
 				ok: true,
@@ -49,8 +52,12 @@ function fakeExtractor() {
 				error,
 			});
 		},
-		fn: async (url: string): Promise<PriceResult> => {
+		fn: async (
+			url: string,
+			options?: ExtractPriceOptions,
+		): Promise<PriceResult> => {
 			calls.push(url);
+			callOptions.push(options);
 			const next = queue.shift();
 			if (!next) {
 				throw new Error("fakeExtractor: no queued result");
@@ -648,5 +655,282 @@ describe("a throwing extractor", () => {
 
 		expect(result.extractFailing).toBe(true);
 		expect(result.error).toBe("extraction threw");
+	});
+});
+
+describe("addItem — user-picked price selector", () => {
+	beforeEach(async () => {
+		await resetTestDatabase();
+	});
+
+	it("stores the selector and passes it to the extractor", async () => {
+		const extractor = fakeExtractor();
+		extractor.queueSuccess(14.99);
+
+		const result = await addItem(
+			makeDeps(extractor, T0),
+			"https://a.example/1",
+			{ priceSelector: '[data-test-id="price"]' },
+		);
+
+		expect(result.created).toBe(true);
+		expect(extractor.callOptions[0]?.priceSelector).toBe(
+			'[data-test-id="price"]',
+		);
+
+		const row = await db
+			.selectFrom("items")
+			.select(["price_selector", "price_selector_failing"])
+			.where("id", "=", result.itemId)
+			.executeTakeFirstOrThrow();
+
+		expect(row.price_selector).toBe('[data-test-id="price"]');
+		expect(row.price_selector_failing).toBe(false);
+	});
+
+	it("records an observed price WITHOUT calling the extractor", async () => {
+		// The whole point on a bot-blocked store: the browser already saw the
+		// price, so fetching again would fail or contradict it.
+		const extractor = fakeExtractor();
+
+		const result = await addItem(
+			makeDeps(extractor, T0),
+			"https://a.example/1",
+			{ priceSelector: ".price", observedPrice: 14.99 },
+		);
+
+		expect(extractor.calls).toHaveLength(0);
+		expect(result.extractFailing).toBe(false);
+		// MAJOR units in, integer MINOR units stored.
+		expect(result.price).toBe(1499);
+
+		const checks = await db
+			.selectFrom("price_checks")
+			.select(["price", "availability"])
+			.where("item_id", "=", result.itemId)
+			.execute();
+
+		expect(checks).toHaveLength(1);
+		expect(checks[0]?.price).toBe(1499);
+	});
+
+	it("converts an observed price with Finnish decimals correctly", async () => {
+		const extractor = fakeExtractor();
+
+		const result = await addItem(
+			makeDeps(extractor, T0),
+			"https://a.example/1",
+			{ observedPrice: 1299, observedCurrency: "EUR" },
+		);
+
+		expect(result.price).toBe(129900);
+	});
+
+	it("stores observed currency and availability", async () => {
+		const extractor = fakeExtractor();
+
+		const result = await addItem(
+			makeDeps(extractor, T0),
+			"https://a.example/1",
+			{
+				observedPrice: 9.9,
+				observedCurrency: "EUR",
+				observedAvailability: "out_of_stock",
+			},
+		);
+
+		const item = await db
+			.selectFrom("items")
+			.select(["currency", "extract_method"])
+			.where("id", "=", result.itemId)
+			.executeTakeFirstOrThrow();
+
+		expect(item.currency).toBe("EUR");
+		expect(item.extract_method).toBe("selector");
+
+		const check = await db
+			.selectFrom("price_checks")
+			.select("availability")
+			.where("item_id", "=", result.itemId)
+			.executeTakeFirstOrThrow();
+
+		expect(check.availability).toBe("out_of_stock");
+	});
+
+	it("updates the selector when re-adding an already tracked URL", async () => {
+		// Re-picking a broken selector goes through this path; dropping it would
+		// make the picker appear to do nothing on the items it exists to fix.
+		const extractor = fakeExtractor();
+		extractor.queueSuccess(10);
+
+		const first = await addItem(
+			makeDeps(extractor, T0),
+			"https://a.example/1",
+			{
+				priceSelector: ".old",
+			},
+		);
+
+		const second = await addItem(
+			makeDeps(extractor, T0),
+			"https://a.example/1",
+			{ priceSelector: ".new" },
+		);
+
+		expect(second.created).toBe(false);
+		expect(second.itemId).toBe(first.itemId);
+
+		const row = await db
+			.selectFrom("items")
+			.select(["price_selector", "price_selector_failing"])
+			.where("id", "=", first.itemId)
+			.executeTakeFirstOrThrow();
+
+		expect(row.price_selector).toBe(".new");
+		expect(row.price_selector_failing).toBe(false);
+	});
+
+	it("leaves the selector untouched when re-adding without one", async () => {
+		const extractor = fakeExtractor();
+		extractor.queueSuccess(10);
+
+		const first = await addItem(
+			makeDeps(extractor, T0),
+			"https://a.example/1",
+			{
+				priceSelector: ".keep",
+			},
+		);
+
+		await addItem(makeDeps(extractor, T0), "https://a.example/1");
+
+		const row = await db
+			.selectFrom("items")
+			.select("price_selector")
+			.where("id", "=", first.itemId)
+			.executeTakeFirstOrThrow();
+
+		expect(row.price_selector).toBe(".keep");
+	});
+
+	it("records no price_checks row when an observed price is absent and extraction fails", async () => {
+		const extractor = fakeExtractor();
+		extractor.queueFailure();
+
+		const result = await addItem(
+			makeDeps(extractor, T0),
+			"https://a.example/1",
+			{ priceSelector: ".p" },
+		);
+
+		expect(result.extractFailing).toBe(true);
+
+		const checks = await db.selectFrom("price_checks").selectAll().execute();
+
+		// The standing invariant: price_checks is a pure record of observed
+		// prices, never a null or sentinel standing in for a failure.
+		expect(checks).toHaveLength(0);
+	});
+});
+
+describe("checkItem — user-picked price selector", () => {
+	beforeEach(async () => {
+		await resetTestDatabase();
+	});
+
+	it("passes the stored selector to the extractor", async () => {
+		const extractor = fakeExtractor();
+		extractor.queueSuccess(10);
+		extractor.queueSuccess(9);
+
+		const added = await addItem(
+			makeDeps(extractor, T0),
+			"https://a.example/1",
+			{
+				priceSelector: ".stored",
+			},
+		);
+
+		await checkItem(makeDeps(extractor, plusHours(T0, 13)), added.itemId);
+
+		expect(extractor.callOptions[1]?.priceSelector).toBe(".stored");
+	});
+
+	it("flags a selector that stopped matching, while keeping the item working", async () => {
+		const extractor = fakeExtractor();
+		extractor.queueSuccess(10);
+		// The cascade rescued the price, but the user's selector missed.
+		extractor.queueSuccess(9, { userSelectorFailed: true, method: "json-ld" });
+
+		const added = await addItem(
+			makeDeps(extractor, T0),
+			"https://a.example/1",
+			{
+				priceSelector: ".gone",
+			},
+		);
+
+		const checked = await checkItem(
+			makeDeps(extractor, plusHours(T0, 13)),
+			added.itemId,
+		);
+
+		expect(checked.ok).toBe(true);
+		expect(checked.price).toBe(900);
+
+		const row = await db
+			.selectFrom("items")
+			.select(["price_selector_failing", "extract_failing"])
+			.where("id", "=", added.itemId)
+			.executeTakeFirstOrThrow();
+
+		// Flagged for a re-pick, but NOT failing — the price still arrived.
+		expect(row.price_selector_failing).toBe(true);
+		expect(row.extract_failing).toBe(false);
+	});
+
+	it("clears the flag once the selector matches again", async () => {
+		const extractor = fakeExtractor();
+		extractor.queueSuccess(10);
+		extractor.queueSuccess(9, { userSelectorFailed: true, method: "json-ld" });
+		extractor.queueSuccess(8, { method: "selector" });
+
+		const added = await addItem(
+			makeDeps(extractor, T0),
+			"https://a.example/1",
+			{
+				priceSelector: ".flaky",
+			},
+		);
+
+		await checkItem(makeDeps(extractor, plusHours(T0, 13)), added.itemId);
+		await checkItem(makeDeps(extractor, plusHours(T0, 26)), added.itemId);
+
+		const row = await db
+			.selectFrom("items")
+			.select("price_selector_failing")
+			.where("id", "=", added.itemId)
+			.executeTakeFirstOrThrow();
+
+		expect(row.price_selector_failing).toBe(false);
+	});
+
+	it("never sets the flag on an item that has no selector", async () => {
+		const extractor = fakeExtractor();
+		extractor.queueSuccess(10);
+		extractor.queueSuccess(9);
+
+		const added = await addItem(makeDeps(extractor, T0), "https://a.example/1");
+
+		await checkItem(makeDeps(extractor, plusHours(T0, 13)), added.itemId);
+
+		const row = await db
+			.selectFrom("items")
+			.select(["price_selector", "price_selector_failing"])
+			.where("id", "=", added.itemId)
+			.executeTakeFirstOrThrow();
+
+		expect(row.price_selector).toBeNull();
+		expect(row.price_selector_failing).toBe(false);
 	});
 });

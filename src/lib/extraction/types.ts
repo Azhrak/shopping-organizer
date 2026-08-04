@@ -24,7 +24,29 @@ export interface PriceResult {
 	image: string | null;
 	availability: Availability;
 	method: ExtractMethod | null;
+	/**
+	 * True when a stored user selector was supplied but no longer matched, so
+	 * parsing fell through to the generic cascade. Undefined when no selector
+	 * was supplied — absence of a selector is not a failure.
+	 *
+	 * The price may still be present: a stale selector degrades to the cascade
+	 * rather than failing the item, and this flag is what lets the UI ask the
+	 * user to re-pick.
+	 */
+	userSelectorFailed?: boolean;
 	error?: string;
 }
 
-export type ExtractPriceFn = (url: string) => Promise<PriceResult>;
+export interface ExtractPriceOptions {
+	/** A CSS selector the user pointed at for this item, if one is stored. */
+	priceSelector?: string | null;
+}
+
+/**
+ * Options are optional so every existing caller — and the test doubles in the
+ * service integration suites — keeps compiling unchanged.
+ */
+export type ExtractPriceFn = (
+	url: string,
+	options?: ExtractPriceOptions,
+) => Promise<PriceResult>;
