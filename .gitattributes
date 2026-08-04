@@ -1,0 +1,25 @@
+# Normalise line endings to LF everywhere.
+#
+# Without this, a Windows clone with core.autocrlf=true checks files out as
+# CRLF while Biome formats them back to LF (its default lineEnding), so every
+# `biome check --write` marks unrelated files as modified and `pnpm lint` fails
+# on files nobody edited.
+#
+# .gitattributes wins over core.autocrlf and is checked in, so the rule holds
+# for every clone rather than depending on each machine's git config. The repo
+# already stores LF, so this pins existing behaviour rather than changing it.
+* text=auto eol=lf
+
+# Binary files must never be touched by the conversion above.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.zip binary
